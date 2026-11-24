@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from backend.rules.models import FilingStatus
+
 
 def age_on(birth_date: date, today: date) -> int:
     had_birthday = (today.month, today.day) >= (birth_date.month, birth_date.day)
@@ -84,5 +86,5 @@ class Household(BaseModel):
                 raise PlanToAgeError(role)
 
     @property
-    def filing_status(self) -> Literal["single", "mfj"]:
+    def filing_status(self) -> FilingStatus:
         return "mfj" if self.spouse else "single"
