@@ -43,10 +43,17 @@ class AgeCap(BaseModel):
     cap: float
 
 
+class SsUnder65(BaseModel):
+    min_age: int
+    agi_limit: dict[FilingStatus, float]
+    first_year: int
+
+
 class ColoradoRules(BaseModel):
     rate: float
     retirement_subtraction: list[AgeCap]
     ss_full_subtraction_min_age: int
+    ss_full_subtraction_under_65: SsUnder65 | None
 
 
 class TaxRules(BaseModel):

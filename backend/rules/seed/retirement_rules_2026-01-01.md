@@ -61,7 +61,7 @@ Start age by year of birth under SECURE 2.0 section 107:
 - Born 1951 through 1959: age 73. The statute names both 73 and 75 for people born in 1959; the IRS proposed regulations (published with the 2024 final regulations) set 73 for that year.
 - Born 1960 or later: age 75.
 
-Owners born before 1951 already passed their start age (70½ or 72) before this tool's first plan year and are not listed.
+- Born 1950 or earlier: listed as age 72. These owners passed their start age under the pre-SECURE 2.0 rules (72, or 70½ for those born before July 1, 1949) before this tool's first plan year, so the engine only needs to know RMDs have started; 72 is a close enough stand-in.
 
 Uniform Lifetime Table (Table III) distribution periods for 2026, ages 72 to 120 (120 covers "120 and over").
 
@@ -99,7 +99,8 @@ Sources:
 
 - Flat income tax rate: 4.4%. The Colorado DOR rate table lists 4.4% for 2025 and does not yet list 2026; the DOR 2026 estimated tax worksheet (DR 0104EP) uses 4.4%. A temporary TABOR rate cut, if triggered for 2026, would be announced later.
 - Pension and annuity subtraction, per person: up to $20,000 at ages 55 to 64, up to $24,000 at 65 or older (age at the end of the year). For joint filers each spouse has their own cap.
-- Social Security: at 65 or older, all federally taxable Social Security can be subtracted. At 55 to 64, Social Security counts toward the $20,000 cap, except that from 2025 on it can be subtracted in full when AGI is $75,000 or less (single) or $95,000 or less (joint). The JSON does not yet hold this income test, so the engine treats Social Security under 65 as part of the $20,000 cap.
+- Social Security: at 65 or older, all federally taxable Social Security can be subtracted. At 55 to 64, from tax year 2025 on, it can be subtracted in full when AGI is $75,000 or less (single) or $95,000 or less (joint); above those limits it counts toward the $20,000 cap.
+- Not yet confirmed: whether Colorado requires an addback of the federal enhanced deduction for seniors. Colorado does require an addback of the federal overtime deduction for 2026 (HB25-1296). To be revisited by the rules research agent.
 
 Sources:
 - https://tax.colorado.gov/individual-income-tax-guide
@@ -167,6 +168,7 @@ Sources:
   },
   "ss_taxation_thresholds": {"single": [25000, 34000], "mfj": [32000, 44000]},
   "rmd_start_ages": [
+    {"born_from": 1900, "born_to": 1950, "age": 72},
     {"born_from": 1951, "born_to": 1959, "age": 73},
     {"born_from": 1960, "born_to": null, "age": 75}
   ],
@@ -214,7 +216,12 @@ Sources:
       {"min_age": 55, "max_age": 64, "cap": 20000},
       {"min_age": 65, "max_age": null, "cap": 24000}
     ],
-    "ss_full_subtraction_min_age": 65
+    "ss_full_subtraction_min_age": 65,
+    "ss_full_subtraction_under_65": {
+      "min_age": 55,
+      "agi_limit": {"single": 75000, "mfj": 95000},
+      "first_year": 2025
+    }
   }
 }
 ```

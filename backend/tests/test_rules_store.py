@@ -68,3 +68,21 @@ def test_current_rules_prefers_newest_accepted(tmp_path: Path) -> None:
     rules, filename = store.current_rules(conn, tmp_path)
     assert filename == "retirement_rules_2027-06-01.md"
     assert rules.year == 2028
+
+
+def test_seed_colorado_ss_under_65() -> None:
+    under_65 = store.parse_rules(SEED.read_text()).colorado.ss_full_subtraction_under_65
+    assert under_65 is not None
+    assert under_65.min_age == 55
+    assert under_65.agi_limit == {"single": 75_000, "mfj": 95_000}
+    assert under_65.first_year == 2025
+
+
+def test_seed_rmd_row_for_1949_birth_year() -> None:
+    rules = store.parse_rules(SEED.read_text())
+    rows = [
+        r
+        for r in rules.rmd_start_ages
+        if r.born_from <= 1949 and (r.born_to is None or r.born_to >= 1949)
+    ]
+    assert [r.age for r in rows] == [72]
