@@ -67,4 +67,14 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Profile" }));
     expect(await screen.findByLabelText("First name")).toBeTruthy();
   });
+
+  it("opens the plan page from the sidebar", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response("{}", { status: 409 }))),
+    );
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Plan" }));
+    expect(await screen.findByText("Complete your profile first")).toBeTruthy();
+  });
 });

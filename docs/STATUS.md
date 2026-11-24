@@ -1,6 +1,6 @@
 # Status
 
-Phases 1 (skeleton), 2 (household profile) and 3 (rules file and projection engine) are complete, with one Phase 3 criterion open (see below). The profile can be entered, saved and reloaded, and `POST /api/plan/project` projects it year by year under a strategy. There is no strategy search or Plan page yet.
+Phases 1 (skeleton), 2 (household profile), 3 (rules file and projection engine) and 4 (strategy search and Plan page) are complete, with one Phase 3 criterion open (see below). The profile can be entered, saved and reloaded. `GET /api/plan` ranks strategies, and the Plan page shows the best one, a comparison table, a balance chart and the year-by-year table.
 
 ## What exists
 
@@ -35,6 +35,13 @@ Phases 1 (skeleton), 2 (household profile) and 3 (rules file and projection engi
   - Long-term gains of $31,116.43 stack on top, from $100,800.00 to $131,916.43. That is entirely above the $98,900.00 0% limit, so the tax is $31,116.43 × 0.15 = $4,667.46.
   - Total by hand: $16,267.46. The engine gives $16,267.46 (16,267.4645), a difference of $0.00.
 
+- `dashboard/src/pages/PlanPage.tsx` with `components/{StrategyTable,YearTable,BalanceChart}.tsx`: calls `GET /api/plan` (about 6 s, shows "Calculating plan") and `GET /api/profile` (for the ACA notice and the heir tax rate). It shows a headline, the top 5 plus the no-conversion baseline with after-tax money and the share of market paths that work side by side, a stacked area chart of balances by account type (Recharts 3.11.1, series colors validated in both themes), and the year table. Notices: "Rules are out of date", the ACA subsidy warning, and "Complete your profile first" on 409. The sidebar has Plan.
+
+## Phase 4 checks
+
+- Sample profile saved, `time curl -s localhost:8000/api/plan` took 6.3 s. It returns 5 `top` entries, every `success_rate` is within 0 to 1, every `safe_extra` is at least 0 and the top `after_tax_end` ($1,162,337.62) is above the baseline's ($1,130,107.82). Two calls returned byte-identical JSON.
+- The Plan page was screenshotted in light and dark themes: headline, comparison table, chart and 22-row year table all render, with no exclamation marks.
+
 ## Next
 
-Phase 4: strategy search, what-if success rate, safe extra spending and the Plan page (see `docs/PLAN.md`).
+Phase 5: IRS rules research agent and the Rules page (see `docs/PLAN.md`).

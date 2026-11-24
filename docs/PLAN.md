@@ -286,14 +286,14 @@ Yearly order (fixed here because the tests do not decide it): (1) wages and 401(
 - A notice when the bridge is ACA: "Roth conversions before 65 may reduce your ACA premium subsidy. This plan does not include it."
 - "Complete your profile first" when there's no profile, and "Calculating plan" while loading.
 
-- [ ] Tests: the headline renders from a mocked `PlanResult`; the table shows `$1,250.00` formatting; the ACA notice appears only when `bridge_is_aca`; the empty state appears on 409. In e2e, save the sample profile, open Plan, and see the headline and at least 20 table rows.
-- [ ] Commit `feat: plan page with strategy comparison and year table`.
+- [x] Tests: the headline renders from a mocked `PlanResult`; the table shows `$1,250.00` formatting; the ACA notice appears only when `bridge_is_aca`; the empty state appears on 409. In e2e, save the sample profile, open Plan, and see the headline and at least 20 table rows.
+- [x] Commit `feat: plan page with strategy comparison and year table`.
 
 **Phase 4 success criteria**
-- [ ] `npm run check` passes.
-- [ ] `time curl -s localhost:8000/api/plan` finishes in under 20 s for the sample profile. The response has 5 `top` entries, each with `0 <= success_rate <= 1` and `safe_extra >= 0`, and the top entry's `after_tax_end` is at least the baseline's.
-- [ ] Two identical `GET /api/plan` calls return identical JSON.
-- [ ] Playwright MCP: the Plan page shows the headline, comparison table, year table and chart in both themes, with no exclamation marks in the text.
+- [x] `npm run check` passes.
+- [x] `time curl -s localhost:8000/api/plan` finishes in under 20 s for the sample profile. The response has 5 `top` entries, each with `0 <= success_rate <= 1` and `safe_extra >= 0`, and the top entry's `after_tax_end` is at least the baseline's.
+- [x] Two identical `GET /api/plan` calls return identical JSON.
+- [x] Playwright MCP: the Plan page shows the headline, comparison table, year table and chart in both themes, with no exclamation marks in the text.
 
 ---
 

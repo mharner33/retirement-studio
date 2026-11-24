@@ -12,6 +12,11 @@
   --focus-ring: #4f58aa;
   --divider: #cbd5fe;
   --error: #a3262a;
+  --series-pretax: #6250d6;
+  --series-roth: #1baf7a;
+  --series-taxable: #eda100;
+  --series-cash: #2a78d6;
+  --series-hsa: #e87ba4;
 }
 
 [data-theme="dark"] {
@@ -27,6 +32,11 @@
   --focus-ring: #a8b1eb;
   --divider: #414665;
   --error: #ff9a9a;
+  --series-pretax: #9085e9;
+  --series-roth: #199e70;
+  --series-taxable: #c98500;
+  --series-cash: #3987e5;
+  --series-hsa: #d55181;
 }
 
 * {
@@ -235,4 +245,110 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.content > .card.wide,
+.content > .notice {
+  max-width: 64rem;
+}
+
+.card.wide {
+  width: 100%;
+}
+
+.notice {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--nav-selected-bg);
+  color: var(--nav-selected-text);
+}
+
+.headline {
+  margin: 0.25rem 0 1rem;
+  font-family: "Instrument Serif", serif;
+  font-size: 1.75rem;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin: 0 0 1rem;
+}
+
+.facts dt {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.facts dd {
+  margin: 0.25rem 0 0;
+  font-size: 1.4rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 0.75rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  padding: 0.5rem 0.75rem;
+  text-align: right;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+th[scope="col"] {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+th[scope="row"] {
+  font-weight: 400;
+  text-align: left;
+  white-space: normal;
+}
+
+tbody tr:nth-child(even) {
+  background: var(--page-bg);
+}
+
+thead th:first-child {
+  text-align: left;
+}
+
+.secondary-inline {
+  color: var(--text-secondary);
+  font-family: "Instrument Sans", system-ui, sans-serif;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0;
+  margin: 0.75rem 0;
+  list-style: none;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-right: 0.4rem;
+  border-radius: 0.2rem;
+}
+
+.chart {
+  width: 100%;
 }

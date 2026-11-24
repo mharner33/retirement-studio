@@ -60,3 +60,46 @@ export interface Household {
   home_value: number;
   mask_terms: string[];
 }
+
+export interface Strategy {
+  conversion_target: "none" | "12" | "22" | "24" | "irmaa1";
+  convert_from_age: number;
+  convert_to_age: number;
+  withdrawal_order: string;
+  claim_ages: [number, number | null];
+  extra_spending: number;
+}
+
+export interface PlanOption {
+  strategy: Strategy;
+  label: string;
+  lifetime_tax: number;
+  after_tax_end: number;
+  shortfall_year: number | null;
+  success_rate: number;
+  safe_extra: number;
+}
+
+export interface YearRow {
+  year: number;
+  ages: (number | null)[];
+  social_security: number;
+  pension: number;
+  rmd: number;
+  conversion: number;
+  withdrawals: Record<string, number>;
+  spending: number;
+  federal_tax: number;
+  state_tax: number;
+  irmaa: number;
+  balances: Record<string, number>;
+  shortfall: number;
+}
+
+export interface PlanResult {
+  rules_file: string;
+  rules_stale: boolean;
+  top: PlanOption[];
+  baseline: PlanOption;
+  best_rows: YearRow[];
+}

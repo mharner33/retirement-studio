@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
 import { getJson } from "./api";
+import { PlanPage } from "./pages/PlanPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { applyTheme, initialTheme, type Theme } from "./theme";
 
-type Page = "status" | "profile";
+type Page = "status" | "profile" | "plan";
+
+const PAGES: { id: Page; label: string }[] = [
+  { id: "status", label: "Status" },
+  { id: "profile", label: "Profile" },
+  { id: "plan", label: "Plan" },
+];
 type Health = "checking" | "up" | "down";
 
 const STATUS_TEXT: Record<Health, string> = {
@@ -47,17 +54,17 @@ export function App() {
       <aside className="sidebar">
         <h1 className="brand">Retirement Studio</h1>
         <nav aria-label="Pages">
-          {(["status", "profile"] as const).map((p) => (
+          {PAGES.map((p) => (
             <button
-              key={p}
+              key={p.id}
               type="button"
-              className={p === page ? "nav-item selected" : "nav-item"}
-              aria-current={p === page ? "page" : undefined}
+              className={p.id === page ? "nav-item selected" : "nav-item"}
+              aria-current={p.id === page ? "page" : undefined}
               onClick={() => {
-                setPage(p);
+                setPage(p.id);
               }}
             >
-              {p === "status" ? "Status" : "Profile"}
+              {p.label}
             </button>
           ))}
         </nav>
@@ -66,16 +73,16 @@ export function App() {
         </button>
       </aside>
       <main className="content">
-        {page === "status" ? (
+        {page === "status" && (
           <section className="card">
             <h2>Status</h2>
             <p className="secondary" role="status">
               {STATUS_TEXT[health]}
             </p>
           </section>
-        ) : (
-          <ProfilePage />
         )}
+        {page === "profile" && <ProfilePage />}
+        {page === "plan" && <PlanPage />}
       </main>
     </div>
   );

@@ -1,0 +1,92 @@
+{
+  "self": {
+    "first_name": "Alex",
+    "birth_date": "1963-06-15",
+    "retirement_age": 63,
+    "plan_to_age": 82,
+    "wages": 120000.0,
+    "contribution_401k": 20000.0,
+    "ss_at_62": 2200.0,
+    "ss_at_fra": 3100.0,
+    "ss_at_70": 3900.0,
+    "ss_claim_age": null,
+    "pension_annual": 0.0,
+    "pension_start_age": null,
+    "pension_survivor_pct": 0.0
+  },
+  "spouse": {
+    "first_name": "Sam",
+    "birth_date": "1965-03-01",
+    "retirement_age": 62,
+    "plan_to_age": 82,
+    "wages": 0.0,
+    "contribution_401k": 0.0,
+    "ss_at_62": 1400.0,
+    "ss_at_fra": 2000.0,
+    "ss_at_70": 2500.0,
+    "ss_claim_age": null,
+    "pension_annual": 0.0,
+    "pension_start_age": null,
+    "pension_survivor_pct": 0.0
+  },
+  "state": "CO",
+  "accounts": [
+    {
+      "id": "a1",
+      "kind": "pretax",
+      "owner": "self",
+      "label": "401(k)",
+      "balance": 900000.0,
+      "cost_basis": 0.0,
+      "last4": "1234",
+      "as_of": "2026-11-01"
+    },
+    {
+      "id": "a2",
+      "kind": "roth",
+      "owner": "self",
+      "label": "Roth IRA",
+      "balance": 60000.0,
+      "cost_basis": 0.0,
+      "last4": "5678",
+      "as_of": "2026-11-01"
+    },
+    {
+      "id": "a3",
+      "kind": "taxable",
+      "owner": "self",
+      "label": "Brokerage",
+      "balance": 250000.0,
+      "cost_basis": 150000.0,
+      "last4": "9012",
+      "as_of": "2026-11-01"
+    },
+    {
+      "id": "a4",
+      "kind": "cash",
+      "owner": "self",
+      "label": "Savings",
+      "balance": 40000.0,
+      "cost_basis": 0.0,
+      "last4": null,
+      "as_of": "2026-11-01"
+    }
+  ],
+  "spending": {
+    "essential": 60000.0,
+    "discretionary": 15000.0,
+    "cobra_monthly": 1800.0,
+    "bridge_monthly": 0.0,
+    "bridge_is_aca": false,
+    "one_time": []
+  },
+  "assumptions": {
+    "return_rate": 0.06,
+    "inflation": 0.025,
+    "ss_cola": 0.025,
+    "volatility": 0.12,
+    "heir_tax_rate": 0.22
+  },
+  "home_value": 0.0,
+  "mask_terms": []
+}
