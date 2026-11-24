@@ -45,6 +45,7 @@ max-complexity = 10
 testpaths = ["backend", "agent"]
 pythonpath = ["."]
 addopts = "--import-mode=importlib --cov --cov-report=term-missing"
+markers = ["slow: long-running test; still runs in the default suite"]
 
 [tool.coverage.run]
 source = ["backend", "agent"]

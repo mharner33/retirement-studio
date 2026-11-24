@@ -12,6 +12,8 @@ from backend.profile.models import (
     Person,
     Spending,
 )
+from backend.rules import store
+from backend.rules.models import TaxRules
 
 
 def build_sample_household() -> Household:
@@ -91,3 +93,8 @@ def sample_household() -> Household:
 @pytest.fixture
 def client(tmp_path: Path) -> TestClient:
     return TestClient(create_app(tmp_path))
+
+
+@pytest.fixture(scope="session")
+def rules() -> TaxRules:
+    return store.parse_rules((store.SEED_DIR / store.SEED_FILENAME).read_text())

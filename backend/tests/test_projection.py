@@ -7,15 +7,9 @@ from backend.engine.projection import Projection, Strategy, YearRow, project
 from backend.engine.social_security import monthly_benefit
 from backend.engine.tax import TaxUnit, bracket_top, irmaa_annual, rules_for_year
 from backend.profile.models import Household, Person
-from backend.rules import store
 from backend.rules.models import TaxRules
 
 START = 2026
-
-
-@pytest.fixture(scope="module")
-def rules() -> TaxRules:
-    return store.parse_rules((store.SEED_DIR / store.SEED_FILENAME).read_text())
 
 
 def strategy(target: str = "none", **kw: object) -> Strategy:
