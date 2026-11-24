@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig } from "@playwright/test";
 
+const backendPort = process.env["BACKEND_PORT"] ?? "8000";
 const dataDir = mkdtempSync(join(tmpdir(), "retirement-studio-e2e-"));
 
 export default defineConfig({
@@ -10,9 +11,9 @@ export default defineConfig({
   use: { baseURL: "http://localhost:5173" },
   webServer: [
     {
-      command: "uv run -m uvicorn backend.main:app --port 8000",
-      url: "http://localhost:8000/api/health",
-      env: { DATA_DIR: dataDir },
+      command: `uv run -m uvicorn backend.main:app --port ${backendPort}`,
+      url: `http://localhost:${backendPort}/api/health`,
+      env: { DATA_DIR: dataDir, BACKEND_PORT: backendPort },
       reuseExistingServer: false,
     },
     {

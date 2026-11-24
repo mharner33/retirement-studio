@@ -10,6 +10,10 @@ describe("formatUsd", () => {
     expect(formatUsd(-75.5)).toBe("-$75.50");
   });
 
+  it("never shows a negative zero", () => {
+    expect(formatUsd(-0)).toBe("$0.00");
+  });
+
   it("formats zero", () => {
     expect(formatUsd(0)).toBe("$0.00");
   });

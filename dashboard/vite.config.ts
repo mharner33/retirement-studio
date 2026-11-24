@@ -1,9 +1,11 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
+const backendPort = process.env["BACKEND_PORT"] ?? "8000";
+
 export default defineConfig({
   plugins: [react()],
-  server: { proxy: { "/api": "http://localhost:8000" } },
+  server: { proxy: { "/api": `http://localhost:${backendPort}` } },
   build: { outDir: "dist", emptyOutDir: true },
   test: {
     environment: "jsdom",

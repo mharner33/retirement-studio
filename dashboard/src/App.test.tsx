@@ -57,4 +57,14 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Light theme" }));
     expect(document.documentElement.dataset["theme"]).toBe("light");
   });
+
+  it("opens the profile page from the sidebar", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response("{}", { status: 404 }))),
+    );
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Profile" }));
+    expect(await screen.findByLabelText("First name")).toBeTruthy();
+  });
 });

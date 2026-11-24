@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { getJson } from "./api";
+import { ProfilePage } from "./pages/ProfilePage";
 import { applyTheme, initialTheme, type Theme } from "./theme";
 
+type Page = "status" | "profile";
 type Health = "checking" | "up" | "down";
 
 const STATUS_TEXT: Record<Health, string> = {
@@ -12,6 +14,7 @@ const STATUS_TEXT: Record<Health, string> = {
 
 export function App() {
   const [theme, setTheme] = useState<Theme>(initialTheme);
+  const [page, setPage] = useState<Page>("status");
   const [health, setHealth] = useState<Health>("checking");
 
   useEffect(() => {
@@ -44,21 +47,35 @@ export function App() {
       <aside className="sidebar">
         <h1 className="brand">Retirement Studio</h1>
         <nav aria-label="Pages">
-          <button type="button" className="nav-item selected" aria-current="page">
-            Status
-          </button>
+          {(["status", "profile"] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              className={p === page ? "nav-item selected" : "nav-item"}
+              aria-current={p === page ? "page" : undefined}
+              onClick={() => {
+                setPage(p);
+              }}
+            >
+              {p === "status" ? "Status" : "Profile"}
+            </button>
+          ))}
         </nav>
         <button type="button" className="primary" onClick={toggleTheme}>
           {theme === "light" ? "Dark theme" : "Light theme"}
         </button>
       </aside>
       <main className="content">
-        <section className="card">
-          <h2>Status</h2>
-          <p className="secondary" role="status">
-            {STATUS_TEXT[health]}
-          </p>
-        </section>
+        {page === "status" ? (
+          <section className="card">
+            <h2>Status</h2>
+            <p className="secondary" role="status">
+              {STATUS_TEXT[health]}
+            </p>
+          </section>
+        ) : (
+          <ProfilePage />
+        )}
       </main>
     </div>
   );

@@ -11,6 +11,7 @@
   --nav-selected-text: #27293b;
   --focus-ring: #4f58aa;
   --divider: #cbd5fe;
+  --error: #a3262a;
 }
 
 [data-theme="dark"] {
@@ -25,6 +26,7 @@
   --nav-selected-text: #e6ebf4;
   --focus-ring: #a8b1eb;
   --divider: #414665;
+  --error: #ff9a9a;
 }
 
 * {
@@ -116,4 +118,121 @@ button:focus-visible {
 .secondary {
   margin: 0.5rem 0 0;
   color: var(--text-secondary);
+}
+
+.num {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.content > h2,
+.content > ol,
+.content > .actions,
+.content > .section,
+.content > button {
+  max-width: 32rem;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: 0;
+  margin: 0;
+}
+
+.section legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 0.75rem;
+  padding: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.field label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.field label.check {
+  flex-direction: row;
+  align-items: center;
+}
+
+input,
+select {
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--page-bg);
+  color: var(--text);
+  font: inherit;
+}
+
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.error {
+  margin: 0.25rem 0 0;
+  color: var(--error);
+  font-size: 0.85rem;
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  color: var(--text-secondary);
+}
+
+.steps li {
+  padding: 0.3rem 0.7rem;
+  border-radius: 0.75rem;
+}
+
+.steps li[aria-current="step"] {
+  background: var(--nav-selected-bg);
+  color: var(--nav-selected-text);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.actions .secondary {
+  margin: 0;
+}
+
+.secondary-button {
+  padding: 0.6rem 0.9rem;
+  background: var(--page-bg);
+  color: var(--text);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.one-time {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }

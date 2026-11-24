@@ -159,13 +159,13 @@ Builder's calls fixed here: stdlib `sqlite3` (no ORM); the household profile is 
 
 **Interfaces — Produces:** `ProfilePage` with steps "You", "Spouse", "Income", "Accounts", "Spending", "Assumptions", plus Back and Next buttons and "Save" on the last step. Once a profile exists, it opens as a single editable page with every section. `MoneyInput` shows `$1,250.00` when not focused and accepts plain digits.
 
-- [ ] Tests: the stepper advances and keeps values; Save sends the JSON shape from 2.1 to `PUT /api/profile`; a 422 shows the field message next to the field; "Add spouse" and "Remove spouse" toggle the spouse section; `MoneyInput` formats on blur. In e2e, fill the form with the `sample_household` values, save, reload, and the values persist.
-- [ ] Commit `feat: guided profile form`.
+- [x] Tests: the stepper advances and keeps values; Save sends the JSON shape from 2.1 to `PUT /api/profile`; a 422 shows the field message next to the field; "Add spouse" and "Remove spouse" toggle the spouse section; `MoneyInput` formats on blur. In e2e, fill the form with the `sample_household` values, save, reload, and the values persist.
+- [x] Commit `feat: guided profile form`.
 
 **Phase 2 success criteria**
-- [ ] `npm run check` passes.
-- [ ] `curl -X PUT localhost:8000/api/profile -d @sample.json` followed by `GET` returns the same body; a negative balance returns 422 with a `balance` error.
-- [ ] Playwright MCP: complete the six steps, reload, every value is shown with money as `$900,000.00`; the dark theme reads correctly.
+- [x] `npm run check` passes.
+- [x] `curl -X PUT localhost:8000/api/profile -d @sample.json` followed by `GET` returns the same body; a negative balance returns 422 with a `balance` error.
+- [x] Playwright MCP: complete the six steps, reload, every value is shown with money as `$900,000.00`; the dark theme reads correctly.
 
 ---
 
