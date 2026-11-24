@@ -244,7 +244,7 @@ Yearly order (fixed here because the tests do not decide it): (1) wages and 401(
 **Phase 3 success criteria**
 - [x] `npm run check` passes.
 - [x] `uv run pytest backend/tests/test_tax.py backend/tests/test_projection.py --no-cov -q` passes.
-- [ ] With the sample profile saved, `curl -X POST localhost:8000/api/plan/project -d '{"conversion_target":"12","convert_from_age":63,"convert_to_age":74,"withdrawal_order":"taxable_first","claim_ages":[67,67]}'` returns rows from 2026 to the spouse's plan-to year, with non-zero `conversion` from age 63 and `rmd` starting in 2038.
+- [x] With the sample profile saved, `curl -X POST localhost:8000/api/plan/project -H 'content-type: application/json' -d '{"conversion_target":"12","convert_from_age":63,"convert_to_age":74,"withdrawal_order":"taxable_first","claim_ages":[67,67]}'` returns rows from 2026 to the spouse's plan-to year, with non-zero `conversion` from age 63. The same call with `"conversion_target":"none"` has `rmd` starting in 2038. (Amended during the build: under fill-12% the sample's pretax balance is fully converted or spent by 2035, so no RMD is due.)
 - [x] Hand check: one row's federal tax recomputed by hand from the seed brackets matches within $1.00. Record the check in `docs/STATUS.md`.
 
 ---
