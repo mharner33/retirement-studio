@@ -20,7 +20,7 @@ Questions 1 and 2 are one optimization: conversions in the low-income years betw
 - A strategy search that compares named, rule-based strategies and ranks them by lifetime tax and ending balance.
 - A what-if check: about 1,000 simulated market paths on the top strategies, reported as a success percentage.
 - A rules file of current IRS and Colorado retirement rules in `data/`, timestamped, refreshed by a research agent when older than 3 months.
-- PDF statement extraction (401(k), IRA, brokerage) with a review step before anything is saved.
+- PDF statement extraction (401(k), IRA, brokerage, and the ssa.gov Social Security statement for the benefit estimates at 62, full retirement age and 70) with a review step before anything is saved. Upload through the UI takes several files at once (drag and drop or a file picker).
 - A spouse can be added, and the plan re-runs.
 - A spending budget: the user enters essential spending; the app checks it lasts to the plan-to age and reports how much more can safely be spent each year on top of it.
 - A planning chat agent (built after the form, planned separately in `docs/PLAN_CHAT.md`) that answers what-if questions and proposes form changes for the user to confirm.

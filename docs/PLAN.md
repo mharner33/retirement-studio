@@ -366,32 +366,39 @@ Yearly order (fixed here because the tests do not decide it): (1) wages and 401(
 - `pdf.extract_text(path: Path) -> str` (pymupdf, pages joined).
 - `pdf.mask(text: str, terms: list[str]) -> str`: digit runs of 6 or more (spaces and dashes allowed inside) become `****` plus the last 4 digits; each term is replaced with `[MASKED]`, case-insensitive.
 - Routes:
-  - `POST /api/statements` (multipart PDF; saved to `data_dir/statements/`; status `uploaded`; also picks up PDFs already in that folder through `POST /api/statements/scan`)
+  - `POST /api/statements` (multipart field `files`, one or more files; each PDF is saved to `data_dir/statements/` with status `uploaded`; returns `list[UploadResult(filename, id: int | None, error: str | None)]`; a non-PDF or duplicate filename gets an `error` while the other files are still saved). PDFs copied straight into that folder are picked up by `POST /api/statements/scan`.
   - `GET /api/statements`
   - `GET /api/statements/{id}/text` (masked text; sets status `no_text` and returns 422 when empty)
-  - `PUT /api/statements/{id}/extraction` (body `ExtractedStatement`; status `pending_review`)
-  - `POST /api/statements/{id}/accept` (body: the edited `ExtractedStatement`; upserts profile accounts matched by `kind` + `owner` + `last4`, otherwise appends; status `accepted`)
+  - `PUT /api/statements/{id}/extraction` (body `ExtractedDocument`; status `pending_review`)
+  - `POST /api/statements/{id}/accept` (body: the edited `ExtractedDocument`; status `accepted`). For an account statement, it upserts profile accounts matched by `kind` + `owner` + `last4`, otherwise appends. For a Social Security statement, it sets `ss_at_62`, `ss_at_fra` and `ss_at_70` on the person chosen in the body's `person: "self" | "spouse"`.
   - `POST /api/statements/{id}/extract` (background agent run, 202)
-- `ExtractedStatement`: `institution: str`, `statement_date: date`, `accounts: list[ExtractedAccount(kind, owner_hint: str, label, balance, cost_basis: float | None, last4: str | None)]`.
+- `ExtractedDocument` is a union discriminated by `doc_type`:
+  - `ExtractedStatement`: `doc_type: Literal["account"]`, `institution: str`, `statement_date: date`, `accounts: list[ExtractedAccount(kind, owner_hint: str, label, balance, cost_basis: float | None, last4: str | None)]`.
+  - `ExtractedSsStatement`: `doc_type: Literal["social_security"]`, `statement_date: date`, `person: Literal["self", "spouse"] | None` (set at review), `monthly_at_62: float`, `monthly_at_fra: float`, `fra_age: str` (for example `"67"`), `monthly_at_70: float`. These are the "estimated monthly benefit" figures on the ssa.gov statement.
 
 - [ ] Tests:
   - `test_extract_text_from_generated_pdf`.
   - `test_mask_account_numbers_keeps_last4` (`"Account 1234-5678-9012"` → `"Account ****9012"`).
+  - `test_mask_ssn_keeps_last4` (`"SSN 123-45-6789"` → `"SSN ****6789"`).
   - `test_mask_terms_case_insensitive`.
   - `test_image_only_pdf_sets_no_text` (Review Focus; the PDF has a drawn rectangle and no text).
   - `test_accept_updates_matching_account_balance`.
   - `test_accept_appends_new_account`.
-  - `test_upload_rejects_non_pdf_415`.
+  - `test_accept_ss_statement_sets_spouse_estimates`.
+  - `test_accept_ss_statement_without_person_422`.
+  - `test_upload_multiple_files_returns_one_result_each`.
+  - `test_upload_mixed_batch_saves_pdfs_and_reports_non_pdf` (3 files, one `.txt` → 2 ids and 1 error).
 - [ ] Commit `feat: statement upload, text extraction and masking`.
 
 ### Task 6.2: Extraction agent
 
 **Files:** Create `agent/extraction.py`, `agent/tests/test_extraction.py`.
 
-**Interfaces — Produces:** `extract(statement_id: int, client: httpx.Client | None = None, model: BaseChatModel | None = None) -> ExtractedStatement`. It gets the masked text over the API, runs `create_agent` with `response_format=ExtractedStatement` and no tools, and `PUT`s the result. When the text route returns 422, it returns without calling the model.
+**Interfaces — Produces:** `extract(statement_id: int, client: httpx.Client | None = None, model: BaseChatModel | None = None) -> ExtractedDocument | None`. It gets the masked text over the API, runs `create_agent` with `response_format=ExtractedDocument` and no tools, and `PUT`s the result. The system prompt tells the model to choose `social_security` for an ssa.gov "Your Social Security Statement" and `account` otherwise. When the text route returns 422, it returns `None` without calling the model.
 
 - [ ] Tests:
-  - `test_extract_puts_pending_review` (the stub returns structured output).
+  - `test_extract_puts_pending_review` (the stub returns an account statement).
+  - `test_extract_social_security_statement` (the stub returns `doc_type="social_security"`; the stored extraction has the three monthly figures).
   - `test_no_text_skips_model` (the stub asserts it was never called).
   - `test_model_never_sees_unmasked_number` (capture the stub's input messages; the full account number is absent).
 - [ ] Commit `feat: statement extraction agent`.
@@ -400,14 +407,27 @@ Yearly order (fixed here because the tests do not decide it): (1) wages and 401(
 
 **Files:** Create `dashboard/src/pages/StatementsPage.tsx` and its test; `e2e/statements.spec.ts`; update `README.md` (setup, `podman compose up`, where to put PDFs) and `docs/STATUS.md`.
 
-**Interfaces — Produces:** The page has an upload control (PDF only), a list with status labels ("Uploaded", "Reading", "Ready to review", "No text found", "Accepted"), and a review form with editable rows (kind, owner, label, balance and basis shown in `formatUsd`), plus "Accept" and "Discard" buttons. The page shows "Nothing is saved until you accept."
+**Interfaces — Produces:**
+- The upload area accepts several PDFs at once, by drag and drop or a "Choose files" button (`<input type="file" multiple accept="application/pdf">`). It shows one result line per file: saved, or the error.
+- An "Extract all" button starts extraction for every `uploaded` file.
+- The statement list shows status labels: "Uploaded", "Reading", "Ready to review", "No text found", "Accepted".
+- The review form depends on `doc_type`:
+  - Account statements get editable rows (kind, owner, label, balance and basis shown in `formatUsd`).
+  - Social Security statements show "Whose statement is this?" (You or Spouse, required) and the three editable monthly amounts.
+- Both forms have "Accept" and "Discard" buttons, and the page shows "Nothing is saved until you accept."
 
-- [ ] Tests: the review form edits a balance before Accept and sends the edited value; "No text found" shows for `no_text`. In e2e, upload a generated PDF, then `PUT` an extraction through the API (no model), review, accept, and the Profile page shows the new balance.
+- [ ] Tests:
+  - Dropping 3 files sends one multipart request with 3 `files` parts and lists 3 results.
+  - A rejected file shows its error while the others show as saved.
+  - The account review form edits a balance before Accept and sends the edited value.
+  - The Social Security form blocks Accept until a person is chosen.
+  - "No text found" shows for `no_text`.
+  - e2e: upload two generated PDFs in one action, then `PUT` an account extraction and a Social Security extraction through the API (no model). Review and accept both. The Profile page shows the new balance and the spouse's new Social Security estimates.
 - [ ] Commit `feat: statements review page`.
 
 **Phase 6 success criteria**
 - [ ] `npm run check` passes.
 - [ ] `podman build` and `podman compose up -d` work. Inside the container, `/api/health` is ok, the dashboard loads at `localhost:8000`, a profile saved through the UI survives `podman compose down && podman compose up -d` (stored in `./data/studio.db`), and an uploaded PDF appears in `./data/statements/`.
-- [ ] Live run by hand with `.env`: upload one real statement from `data/`, run Extract, review, accept, and the Plan page updates. Record the outcome in `docs/STATUS.md` with no account details.
+- [ ] Live run by hand with `.env`: upload one real account statement and one real Social Security statement together, run "Extract all", review, accept, and the Plan page updates. Record the outcome in `docs/STATUS.md` with no account details.
 - [ ] Playwright MCP: Profile, Plan, Rules and Statements pages all render in both themes; money everywhere looks like `$1,250.00`; no exclamation marks.
 - [ ] `docs/STATUS.md` describes everything built and how to run it; the chat agent is listed as next, in `docs/PLAN_CHAT.md`.
