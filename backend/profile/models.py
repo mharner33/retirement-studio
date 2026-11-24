@@ -1,7 +1,7 @@
 from datetime import date
-from typing import Literal, Self
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 def age_on(birth_date: date, today: date) -> int:
@@ -23,12 +23,6 @@ class Person(BaseModel):
     pension_annual: float = 0
     pension_start_age: int | None = None
     pension_survivor_pct: float = 0
-
-    @model_validator(mode="after")
-    def plan_to_age_above_current_age(self) -> Self:
-        if self.plan_to_age <= age_on(self.birth_date, date.today()):
-            raise ValueError("plan_to_age must be above current age")
-        return self
 
 
 class Account(BaseModel):
@@ -76,6 +70,12 @@ class Household(BaseModel):
     assumptions: Assumptions
     home_value: float = 0
     mask_terms: list[str] = []
+
+    def check_plan_to_age(self) -> None:
+        today = date.today()
+        for person in (self.self_, self.spouse):
+            if person and person.plan_to_age <= age_on(person.birth_date, today):
+                raise ValueError("plan_to_age must be above current age")
 
     @property
     def filing_status(self) -> Literal["single", "mfj"]:

@@ -36,6 +36,10 @@ def get_profile(conn: Conn) -> Household:
 
 @router.put("")
 def put_profile(household: Household, conn: Conn) -> Household:
+    try:
+        household.check_plan_to_age()
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from e
     conn.execute(
         "INSERT INTO profile (id, body) VALUES (1, ?) "
         "ON CONFLICT(id) DO UPDATE SET body = excluded.body",

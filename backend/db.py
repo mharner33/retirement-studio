@@ -23,6 +23,6 @@ CREATE TABLE IF NOT EXISTS rules (
 
 def connect(path: Path) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
+    conn = sqlite3.connect(path, check_same_thread=False)
     conn.executescript(SCHEMA)
     return conn

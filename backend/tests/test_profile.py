@@ -1,7 +1,10 @@
+import json
 from datetime import date
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from backend import db, settings
 from backend.profile.models import Household
 from backend.tests.conftest import build_sample_household
 
@@ -49,3 +52,16 @@ def test_filing_status_follows_spouse() -> None:
     household = build_sample_household()
     assert household.filing_status == "mfj"
     assert household.model_copy(update={"spouse": None}).filing_status == "single"
+
+
+def test_stored_profile_past_plan_to_age_still_loads(
+    client: TestClient, tmp_path: Path, sample_household: Household
+) -> None:
+    sent = body(sample_household)
+    sent["self"]["birth_date"] = date(date.today().year - 90, 1, 1).isoformat()
+    sent["self"]["plan_to_age"] = 82
+    conn = db.connect(settings.db_path(tmp_path))
+    conn.execute("INSERT INTO profile (id, body) VALUES (1, ?)", (json.dumps(sent),))
+    conn.commit()
+    conn.close()
+    assert client.get("/api/profile").status_code == 200
