@@ -225,7 +225,7 @@ Builder's calls fixed here: stdlib `sqlite3` (no ORM); the household profile is 
 
 Yearly order (fixed here because the tests do not decide it): (1) wages and 401(k) contributions until each retirement age; (2) Social Security from the claim age with COLA, spousal top-up, survivor keeps the larger benefit, pension with survivor percent; (3) RMD from `rmd_start_age`, using the survivor's age after a death; (4) conversion within `[convert_from_age, convert_to_age]` of the older living person = `max(0, target_ceiling − ordinary income so far)`, where `irmaa1` means first IRMAA threshold − $1,000; (5) spending = (essential + discretionary + extra) inflated + one-time + health premiums (COBRA for 18 months from retirement, then bridge until 65, then Part B base) + last year's tax bill; (6) cover the gap from accounts in the strategy order, cash always first; taxable withdrawals realize gain pro-rata to basis; tax is grossed up by iterating up to 20 times until it changes by less than $1; (7) apply returns (cash grows at inflation); (8) when a person passes `plan_to_age`, their accounts roll to the survivor and filing becomes `single` the following year. The plan ends after the last living person's `plan_to_age`. `shortfall_year` is the first year the gap cannot be covered; rows continue with zero balances.
 
-- [ ] Tests:
+- [x] Tests:
   - `test_monthly_benefit_interpolates` (claim 65 between the 62 and 67 values).
   - `test_spousal_topup_when_low_own_benefit`.
   - `test_spousal_topup_zero_when_own_high`.
@@ -239,13 +239,13 @@ Yearly order (fixed here because the tests do not decide it): (1) wages and 401(
   - `test_overspending_reports_shortfall_without_error` (Review Focus).
   - `test_deterministic_same_inputs_same_output`.
   - API: `test_project_endpoint_returns_rows` (needs a saved profile; 409 without one).
-- [ ] Commit `feat: year-by-year projection engine`.
+- [x] Commit `feat: year-by-year projection engine`.
 
 **Phase 3 success criteria**
-- [ ] `npm run check` passes.
-- [ ] `uv run pytest backend/tests/test_tax.py backend/tests/test_projection.py --no-cov -q` passes.
+- [x] `npm run check` passes.
+- [x] `uv run pytest backend/tests/test_tax.py backend/tests/test_projection.py --no-cov -q` passes.
 - [ ] With the sample profile saved, `curl -X POST localhost:8000/api/plan/project -d '{"conversion_target":"12","convert_from_age":63,"convert_to_age":74,"withdrawal_order":"taxable_first","claim_ages":[67,67]}'` returns rows from 2026 to the spouse's plan-to year, with non-zero `conversion` from age 63 and `rmd` starting in 2038.
-- [ ] Hand check: one row's federal tax recomputed by hand from the seed brackets matches within $1.00. Record the check in `docs/STATUS.md`.
+- [x] Hand check: one row's federal tax recomputed by hand from the seed brackets matches within $1.00. Record the check in `docs/STATUS.md`.
 
 ---
 
