@@ -18,3 +18,5 @@ data/
 # Node modules directory
 node_modules/
 
+.coverage
+htmlcov/
