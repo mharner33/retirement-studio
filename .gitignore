@@ -22,3 +22,5 @@ dashboard/dist/
 
 .coverage
 htmlcov/
+test-results/
+playwright-report/

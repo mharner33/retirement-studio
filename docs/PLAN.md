@@ -118,19 +118,19 @@ Builder's calls fixed here: stdlib `sqlite3` (no ORM); the household profile is 
 
 **Files:** Create `playwright.config.ts` (`webServer`: backend on 8000 with `DATA_DIR` pointing to a temp dir, Vite on 5173), `e2e/health.spec.ts`, `lefthook.yml`, `Containerfile`, `compose.yaml`, `.containerignore`; modify `backend/main.py` (serve `dashboard/dist` at `/` when the folder exists), `docs/TECH_STACK.md` (drop the claim-id line, Python 3.12), `docs/STATUS.md`, `README.md`.
 
-- [ ] `e2e/health.spec.ts`: page shows "Backend is up"; after the theme toggle, the body background is `rgb(25, 27, 46)`.
-- [ ] `lefthook.yml` pre-commit runs in parallel: `uv run ruff format --check`, `uv run ruff check`, `npx pyright`, `uv run pytest -q`, `npx prettier --check -u dashboard e2e *.config.*`, `npx eslint dashboard e2e *.config.*`, `npx tsc`, `npx vitest run --root dashboard --coverage`.
-- [ ] `Containerfile`: stage 1 `node:26` runs `npm ci && npx vite build dashboard`; stage 2 `python:3.12-slim` with uv runs `uv sync --frozen --no-dev`, copies `backend/`, `agent/` and `dashboard/dist`, sets `DATA_DIR=/data`, `EXPOSE 8000`, CMD uvicorn. `compose.yaml`: one service, port `8000:8000`, volume `./data:/data:Z`, `env_file: .env`, healthcheck on `/api/health`.
-- [ ] Add a backend test `test_serves_dashboard_when_built` (a tmp `dist/index.html` is served at `/`).
-- [ ] Commit `chore: e2e, pre-commit hooks, container`.
+- [x] `e2e/health.spec.ts`: page shows "Backend is up"; after the theme toggle, the body background is `rgb(25, 27, 46)`.
+- [x] `lefthook.yml` pre-commit runs in parallel: `uv run ruff format --check`, `uv run ruff check`, `npx pyright`, `uv run pytest -q`, `npx prettier --check -u dashboard e2e *.config.*`, `npx eslint dashboard e2e *.config.*`, `npx tsc`, `npx vitest run --root dashboard --coverage`.
+- [x] `Containerfile`: stage 1 `node:26` runs `npm ci && npx vite build dashboard`; stage 2 `python:3.12-slim` with uv runs `uv sync --frozen --no-dev`, copies `backend/`, `agent/` and `dashboard/dist`, sets `DATA_DIR=/data`, `EXPOSE 8000`, CMD uvicorn. `compose.yaml`: one service, port `8000:8000`, volume `./data:/data:Z`, `env_file: .env`, healthcheck on `/api/health`.
+- [x] Add a backend test `test_serves_dashboard_when_built` (a tmp `dist/index.html` is served at `/`).
+- [x] Commit `chore: e2e, pre-commit hooks, container`.
 
 **Phase 1 success criteria**
-- [ ] `uv run python --version` prints `Python 3.12.x`; `uv run python -c "import pymupdf"` exits 0.
-- [ ] `npm run check` passes (Python and TS coverage both ≥80%, e2e green).
-- [ ] `npm run dev`, then `curl -s localhost:8000/api/health` → `{"status":"ok"}`.
-- [ ] `podman build -t retirement-studio -f Containerfile .` succeeds; `podman compose up -d`, then `curl -s localhost:8000/api/health` → `{"status":"ok"}`, and `curl -s localhost:8000/` returns HTML containing `<div id="root">`.
-- [ ] Playwright MCP: the dashboard at `localhost:5173` shows "Backend is up" in both themes, and the colors match `docs/BRAND.md`.
-- [ ] `git commit` on a staged file runs the lefthook checks (visible in output).
+- [x] `uv run python --version` prints `Python 3.12.x`; `uv run python -c "import pymupdf"` exits 0.
+- [x] `npm run check` passes (Python and TS coverage both ≥80%, e2e green).
+- [x] `npm run dev`, then `curl -s localhost:8000/api/health` → `{"status":"ok"}`.
+- [x] `podman build -t retirement-studio -f Containerfile .` succeeds; `podman compose up -d`, then `curl -s localhost:8000/api/health` → `{"status":"ok"}`, and `curl -s localhost:8000/` returns HTML containing `<div id="root">`.
+- [x] Playwright MCP: the dashboard at `localhost:5173` shows "Backend is up" in both themes, and the colors match `docs/BRAND.md`.
+- [x] `git commit` on a staged file runs the lefthook checks (visible in output).
 
 ---
 
