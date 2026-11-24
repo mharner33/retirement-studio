@@ -7,7 +7,7 @@ by iteration. Then returns are applied, with cash growing at inflation. The
 function is pure: the household and rules are not changed.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -39,7 +39,6 @@ from backend.rules.models import FilingStatus, TaxRules
 ConversionTarget = Literal["none", "12", "22", "24", "irmaa1"]
 MAX_ROUNDS = 20
 TOLERANCE = 1.0
-CONVERSION_TOLERANCE = 0.01
 IRMAA_MARGIN = 1_000.0
 BISECT_STEPS = 40
 IRMAA_LOOKBACK = 2
@@ -238,14 +237,29 @@ def _run_year(yr: _Year, portfolio: Portfolio, rate: float) -> YearRow:
     portfolio.roll_over(tuple(m.role for m in yr.living))
     base = _begin(yr, portfolio)
     settled = _settle(yr, base, portfolio)
-    portfolio.convert(settled.conversion)
     portfolio.withdraw(settled.draw.amounts)
-    drawn = sum(settled.draw.amounts.values())
-    surplus = base.inflows + drawn - base.outflows - settled.taxes.total
-    if surplus > 0:
-        portfolio.deposit("cash", yr.living[0].role, surplus)
+    portfolio.convert(settled.conversion)
+    funded = _fund(yr, base, settled, portfolio)
     portfolio.grow(rate, yr.plan.household.assumptions.inflation)
-    return _row(yr, base, settled, portfolio)
+    return _row(yr, base, replace(settled, draw=funded), portfolio)
+
+
+def _fund(yr: _Year, base: _Base, settled: _Settlement, portfolio: Portfolio) -> Draw:
+    """Reconcile cash so the settled tax is fully paid: draw what the last
+    round left uncovered (under $1 once converged, or the shortfall), or
+    deposit a surplus to cash. Returns the year's total withdrawals."""
+    drawn = settled.draw.amounts
+    gap = base.outflows + settled.taxes.total - base.inflows - sum(drawn.values())
+    if gap <= 0:
+        if gap < 0:
+            portfolio.deposit("cash", yr.living[0].role, -gap)
+        return Draw(drawn, 0.0)
+    extra = portfolio.plan(gap, yr.plan.strategy.withdrawal_order, {})
+    portfolio.withdraw(extra.amounts)
+    total = dict(drawn)
+    for i, amount in extra.amounts.items():
+        total[i] = total.get(i, 0.0) + amount
+    return Draw(total, extra.shortfall)
 
 
 def _begin(yr: _Year, portfolio: Portfolio) -> _Base:
@@ -291,48 +305,62 @@ def _spending(yr: _Year) -> float:
 
 
 def _settle(yr: _Year, base: _Base, portfolio: Portfolio) -> _Settlement:
-    """Gross up: repeat the conversion, withdrawals and tax until the tax
-    changes by less than $1 and the conversion by less than a cent, at most
-    20 rounds."""
+    """Spending comes first: when a year with a conversion still cannot be
+    covered, settle it again without the conversion."""
+    settled = _iterate(yr, base, portfolio, convert=True)
+    if settled.draw.shortfall and settled.conversion:
+        settled = _iterate(yr, base, portfolio, convert=False)
+    return settled
+
+
+def _iterate(
+    yr: _Year, base: _Base, portfolio: Portfolio, *, convert: bool
+) -> _Settlement:
+    """Gross up: repeat withdrawals, conversion and tax until the tax and the
+    conversion each change by less than $1, at most 20 rounds."""
     settled = _Settlement({}, Draw({}, 0.0), _Taxes())
     for _ in range(MAX_ROUNDS):
-        nxt = _round(yr, base, portfolio, settled)
+        nxt = _round(yr, base, portfolio, settled, convert=convert)
         tax_change = abs(nxt.taxes.total - settled.taxes.total)
         conversion_change = abs(
             sum(nxt.conversion.values()) - sum(settled.conversion.values())
         )
         settled = nxt
-        if tax_change < TOLERANCE and conversion_change < CONVERSION_TOLERANCE:
+        if tax_change < TOLERANCE and conversion_change < TOLERANCE:
             break
     return settled
 
 
 def _round(
-    yr: _Year, base: _Base, portfolio: Portfolio, prev: _Settlement
+    yr: _Year, base: _Base, portfolio: Portfolio, prev: _Settlement, *, convert: bool
 ) -> _Settlement:
-    conversion = _conversion(yr, base, portfolio, prev)
+    """Draw for spending plus the previous round's tax from full balances,
+    then size the conversion against that same draw from the pretax left."""
     need = base.outflows + prev.taxes.total - base.inflows
-    draw = portfolio.plan(need, yr.plan.strategy.withdrawal_order, conversion)
+    draw = portfolio.plan(need, yr.plan.strategy.withdrawal_order, {})
+    conversion = _conversion(yr, base, portfolio, draw) if convert else {}
     return _Settlement(conversion, draw, _taxes(yr, base, portfolio, conversion, draw))
 
 
 def _conversion(
-    yr: _Year, base: _Base, portfolio: Portfolio, prev: _Settlement
+    yr: _Year, base: _Base, portfolio: Portfolio, draw: Draw
 ) -> dict[int, float]:
     """Pretax to convert: enough to bring ordinary income (including this
     year's pretax withdrawals and the taxable Social Security the conversion
-    adds) to the bracket top, or MAGI to $1,000 under the first IRMAA tier."""
+    adds) to the bracket top, or MAGI to $1,000 under the first IRMAA tier.
+    Only pretax left after `draw` can be converted."""
     s = yr.plan.strategy
     oldest = max(m.age(yr.year) for m in yr.living)
     if s.conversion_target == "none" or not (
         s.convert_from_age <= oldest <= s.convert_to_age
     ):
         return {}
-    drawn = sum(portfolio.by_owner(prev.draw.amounts, "pretax").values())
-    mix = _Mix(base.fixed_ordinary + drawn, sum(base.ss.values()), prev.taxes.ltcg)
-    cap = sum(portfolio.pretax_balance(o) for o in OWNERS)
-    amount = _fill(_goal(yr, mix.ltcg), mix, cap, yr)
-    return portfolio.pretax_split(amount, OWNERS)
+    drawn = sum(portfolio.by_owner(draw.amounts, "pretax").values())
+    ltcg = portfolio.gains(draw.amounts)
+    mix = _Mix(base.fixed_ordinary + drawn, sum(base.ss.values()), ltcg)
+    cap = sum(portfolio.pretax_balance(o) for o in OWNERS) - drawn
+    amount = _fill(_goal(yr, ltcg), mix, cap, yr)
+    return portfolio.pretax_split(amount, OWNERS, draw.amounts)
 
 
 def _goal(yr: _Year, ltcg: float) -> float:

@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from backend.engine.projection import Projection, Strategy, YearRow, project
 from backend.engine.social_security import monthly_benefit
-from backend.engine.tax import TaxUnit, bracket_top, rules_for_year
+from backend.engine.tax import TaxUnit, bracket_top, irmaa_annual, rules_for_year
 from backend.profile.models import Household, Person
 from backend.rules import store
 from backend.rules.models import TaxRules
@@ -232,3 +232,134 @@ def test_project_endpoint_returns_rows(
     assert data["rows"][0]["year"] == date.today().year
     assert data["rows"][0]["conversion"] > 0
     assert set(data) >= {"rows", "lifetime_tax", "after_tax_end", "shortfall_year"}
+
+
+ORDERS = ("taxable_first", "pretax_first", "proportional")
+
+
+@pytest.mark.parametrize("order", ORDERS)
+@pytest.mark.parametrize("target", ["12", "22", "24"])
+def test_conversion_never_overshoots_bracket_top(
+    sample_household: Household, rules: TaxRules, target: str, order: str
+) -> None:
+    p = project(
+        sample_household, strategy(target, withdrawal_order=order), rules, START
+    )
+    converting = [r for r in p.rows if r.conversion > 0]
+    assert converting
+    for r in converting:
+        unit = TaxUnit(r.filing, tuple(a for a in r.ages if a is not None), r.year)
+        year_rules = rules_for_year(rules, r.year, 0.025)
+        top = bracket_top(int(target) / 100, unit, year_rules, r.capital_gains)
+        assert r.ordinary_income <= top + 1
+
+
+@pytest.mark.parametrize("order", ORDERS)
+@pytest.mark.parametrize("target", ["12", "24"])
+@pytest.mark.parametrize("extra", [0, 190_000])
+def test_money_is_conserved_every_year(
+    sample_household: Household, rules: TaxRules, target: str, order: str, extra: int
+) -> None:
+    s = strategy(target, withdrawal_order=order, extra_spending=extra)
+    p = project(sample_household, s, rules, START)
+    start = sum(a.balance for a in sample_household.accounts)
+    for r in p.rows:
+        b = r.balances
+        cash = b["cash"] / 1.025
+        before_growth = cash + (sum(b.values()) - b["cash"]) / 1.06
+        inflows = r.wages + r.social_security + r.pension + r.shortfall
+        outflows = r.spending + r.health_premiums
+        tax = r.federal_tax + r.state_tax + r.irmaa
+        assert start + inflows - outflows - tax == pytest.approx(before_growth, abs=1)
+        start = sum(b.values())
+
+
+def test_spending_comes_before_conversion(rules: TaxRules) -> None:
+    # One year, 401(k) only. Spending plus its tax fits in the $100,000; the
+    # conversion may only use what is left, so it never causes a shortfall.
+    h = Household.model_validate(
+        {
+            "self": {
+                "first_name": "Lee",
+                "birth_date": "1960-01-01",
+                "retirement_age": 60,
+                "plan_to_age": 66,
+                "ss_at_62": 0,
+                "ss_at_fra": 0,
+                "ss_at_70": 0,
+            },
+            "accounts": [
+                {
+                    "id": "p",
+                    "kind": "pretax",
+                    "owner": "self",
+                    "label": "IRA",
+                    "balance": 100_000,
+                    "as_of": "2026-01-01",
+                }
+            ],
+            "spending": {"essential": 80_000},
+            "assumptions": {},
+        }
+    )
+    none = project(h, strategy("none", claim_ages=(70, None)), rules, START)
+    fill = project(h, strategy("22", claim_ages=(70, None)), rules, START)
+    assert none.shortfall_year is None
+    assert fill.shortfall_year is None
+    (row_none,) = none.rows
+    (row_fill,) = fill.rows
+    assert 0 < row_fill.conversion < 100_000 - row_none.withdrawals["pretax"]
+    assert row_fill.balances["pretax"] == pytest.approx(0, abs=1)
+
+
+def test_no_year_both_converts_and_falls_short(
+    sample_household: Household, rules: TaxRules
+) -> None:
+    fill = project(
+        sample_household, strategy("12", extra_spending=190_000), rules, START
+    )
+    none = project(
+        sample_household, strategy("none", extra_spending=190_000), rules, START
+    )
+    assert fill.shortfall_year is not None
+    assert none.shortfall_year is not None
+    assert fill.shortfall_year >= none.shortfall_year
+    assert not [r.year for r in fill.rows if r.conversion > 0 and r.shortfall > 0]
+
+
+def test_irmaa_uses_magi_from_two_years_earlier(
+    sample_household: Household, rules: TaxRules
+) -> None:
+    p = project(
+        sample_household, strategy("24", withdrawal_order="pretax_first"), rules, START
+    )
+    high, _, now = row(p, 2026), row(p, 2027), row(p, 2028)
+    assert high.magi > 400_000
+    assert high.irmaa == 0  # nobody is 65 yet
+    rules_2028 = rules_for_year(rules, 2028, 0.025)
+    # self turns 65 in 2028; the surcharge follows 2026's MAGI, not 2028's
+    assert now.irmaa == pytest.approx(irmaa_annual(high.magi, "mfj", 1, rules_2028))
+    assert now.irmaa > 0
+    assert irmaa_annual(now.magi, "mfj", 1, rules_2028) == 0
+
+
+def test_colorado_splits_taxable_ss_by_benefit(
+    sample_household: Household, rules: TaxRules
+) -> None:
+    p = project(sample_household, strategy("12", claim_ages=(64, 62)), rules, START)
+    r = row(p, 2027)  # ages 64 and 62, both claimed, AGI over the under-65 limit
+    # Benefits: self 2,560 x 12 x 1.025 = 31,488; spouse 1,400 x 12 x 1.025 = 17,220.
+    assert r.social_security == pytest.approx(48_708)
+    # Taxable SS is the 85% maximum, 41,401.80. The spouse's share is
+    # 41,401.80 x 17,220 / 48,708 = 0.85 x 17,220 = 14,637.00.
+    taxable_ss = r.ordinary_income - r.conversion
+    assert taxable_ss == pytest.approx(41_401.80, abs=0.01)
+    spouse_share = taxable_ss * 17_220 / 48_708
+    assert spouse_share == pytest.approx(14_637.00, abs=0.01)
+    # Caps 20,000 x 1.025 = 20,500 each. Self: the conversion alone fills the
+    # cap. Spouse: only the SS share, under the cap. Federal taxable income is
+    # ordinary + gains - 33,005 (the 32,200 standard deduction inflated).
+    federal_taxable = r.ordinary_income + r.capital_gains - 33_005
+    expected = 0.044 * (federal_taxable - 20_500 - spouse_share)
+    assert r.state_tax == pytest.approx(expected, abs=0.01)
+    assert r.state_tax == pytest.approx(4_128.56, abs=0.01)

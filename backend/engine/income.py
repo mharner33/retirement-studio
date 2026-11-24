@@ -67,7 +67,12 @@ def social_security(
 ) -> dict[Owner, float]:
     """Yearly benefits for the living, multiplied by `cola` (the growth since
     the plan start). Spousal top-ups are paid once both have claimed; after a
-    death the survivor keeps the larger of the two benefits."""
+    death the survivor keeps the larger of the two benefits.
+
+    Simplification: the survivor receives the deceased's benefit (at the
+    deceased's claim age) from the first year after the death, even before
+    reaching their own claim age, and with no survivor-age reduction.
+    """
     living = [m for m in people if m.alive(year)]
     own: dict[Owner, float] = {
         m.role: m.own_benefit() if m.claimed(year) else 0.0 for m in living

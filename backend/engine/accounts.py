@@ -62,10 +62,14 @@ class Portfolio:
         )
 
     def pretax_split(
-        self, amount: float, owners: tuple[Owner, ...]
+        self,
+        amount: float,
+        owners: tuple[Owner, ...],
+        reserved: Mapping[int, float] | None = None,
     ) -> dict[int, float]:
-        """Take `amount` from pretax holdings, the first owner's before the
-        next, pro rata across one owner's holdings."""
+        """Take `amount` from pretax holdings less `reserved`, the first
+        owner's before the next, pro rata across one owner's holdings."""
+        avail = self._avail(reserved or {})
         out: dict[int, float] = {}
         for owner in owners:
             idx = [
@@ -73,8 +77,9 @@ class Portfolio:
                 for i, h in enumerate(self.holdings)
                 if h.kind == "pretax" and h.owner == owner
             ]
-            out |= _pro_rata(min(amount, self.pretax_balance(owner)), idx, self._bal())
-            amount -= sum(out[i] for i in idx if i in out)
+            take = min(amount, sum(avail[i] for i in idx))
+            out |= _pro_rata(take, idx, avail)
+            amount -= take
         return out
 
     def plan(
@@ -82,7 +87,7 @@ class Portfolio:
     ) -> Draw:
         """Withdrawals covering `need`, group by group in `order`, pro rata by
         balance within a group, from balances less `reserved`."""
-        avail = [b - reserved.get(i, 0.0) for i, b in enumerate(self._bal())]
+        avail = self._avail(reserved)
         amounts: dict[int, float] = {}
         remaining = max(0.0, need)
         for group in ORDERS[order]:
@@ -136,8 +141,8 @@ class Portfolio:
         for h in self.holdings:
             h.balance *= 1 + (cash_rate if h.kind == "cash" else rate)
 
-    def _bal(self) -> list[float]:
-        return [h.balance for h in self.holdings]
+    def _avail(self, reserved: Mapping[int, float]) -> list[float]:
+        return [h.balance - reserved.get(i, 0.0) for i, h in enumerate(self.holdings)]
 
     @staticmethod
     def _gain_share(h: Holding) -> float:
