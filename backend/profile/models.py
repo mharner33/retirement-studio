@@ -9,6 +9,12 @@ def age_on(birth_date: date, today: date) -> int:
     return today.year - birth_date.year - (not had_birthday)
 
 
+class PlanToAgeError(ValueError):
+    def __init__(self, role: str) -> None:
+        super().__init__("plan_to_age must be above current age")
+        self.role = role
+
+
 class Person(BaseModel):
     first_name: str
     birth_date: date
@@ -73,9 +79,9 @@ class Household(BaseModel):
 
     def check_plan_to_age(self) -> None:
         today = date.today()
-        for person in (self.self_, self.spouse):
+        for role, person in (("self", self.self_), ("spouse", self.spouse)):
             if person and person.plan_to_age <= age_on(person.birth_date, today):
-                raise ValueError("plan_to_age must be above current age")
+                raise PlanToAgeError(role)
 
     @property
     def filing_status(self) -> Literal["single", "mfj"]:

@@ -43,9 +43,21 @@ def test_plan_to_age_not_above_current_age_422(
     sent = body(sample_household)
     sent["self"]["birth_date"] = date(today.year - 60, 1, 1).isoformat()
     sent["self"]["plan_to_age"] = 60
-    assert client.put("/api/profile", json=sent).status_code == 422
+    res = client.put("/api/profile", json=sent)
+    assert res.status_code == 422
+    assert res.json()["detail"][0]["loc"] == ["body", "self", "plan_to_age"]
     sent["self"]["plan_to_age"] = 61
     assert client.put("/api/profile", json=sent).status_code == 200
+
+
+def test_spouse_plan_to_age_error_points_at_spouse(
+    client: TestClient, sample_household: Household
+) -> None:
+    sent = body(sample_household)
+    sent["spouse"]["birth_date"] = date(date.today().year - 60, 1, 1).isoformat()
+    sent["spouse"]["plan_to_age"] = 60
+    res = client.put("/api/profile", json=sent)
+    assert res.json()["detail"][0]["loc"] == ["body", "spouse", "plan_to_age"]
 
 
 def test_filing_status_follows_spouse() -> None:

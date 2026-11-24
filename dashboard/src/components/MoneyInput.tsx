@@ -11,8 +11,9 @@ export function MoneyInput({ value, onChange, className, ...rest }: Readonly<Pro
 
   function edit(raw: string): void {
     setText(raw);
-    const parsed = Number(raw.replace(/[$,\s]/g, ""));
-    onChange(Number.isFinite(parsed) ? parsed : 0);
+    const cleaned = raw.replace(/[$,\s]/g, "");
+    const parsed = cleaned === "" ? 0 : Number(cleaned);
+    if (Number.isFinite(parsed)) onChange(parsed);
   }
 
   return (

@@ -74,12 +74,27 @@ export function blankHousehold(): Household {
   };
 }
 
+interface FieldError {
+  loc: unknown[];
+  msg: string;
+}
+
+function isFieldError(item: unknown): item is FieldError {
+  return (
+    typeof item === "object" &&
+    item !== null &&
+    "loc" in item &&
+    Array.isArray(item.loc) &&
+    "msg" in item &&
+    typeof item.msg === "string"
+  );
+}
+
 export function parseErrors(detail: unknown): Errors {
   const errors: Errors = {};
   if (!Array.isArray(detail)) return errors;
-  for (const item of detail as { loc?: unknown[]; msg?: string }[]) {
-    const path = (item.loc ?? []).slice(1).map(String).join(".");
-    errors[path] ??= item.msg ?? "Invalid value";
+  for (const item of detail) {
+    if (isFieldError(item)) errors[item.loc.slice(1).map(String).join(".")] ??= item.msg;
   }
   return errors;
 }

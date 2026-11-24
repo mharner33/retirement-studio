@@ -47,4 +47,23 @@ describe("MoneyInput", () => {
     fireEvent.change(input, { target: { value: "-20" } });
     expect(screen.getByText("-20")).toBeTruthy();
   });
+
+  it("treats empty input as zero", () => {
+    render(<Harness start={5} />);
+    const input = screen.getByLabelText<HTMLInputElement>("Amount");
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "" } });
+    expect(screen.getByText("0")).toBeTruthy();
+  });
+
+  it("leaves the value unchanged on unparseable input", () => {
+    render(<Harness start={5} />);
+    const input = screen.getByLabelText<HTMLInputElement>("Amount");
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "abc" } });
+    fireEvent.change(input, { target: { value: "1.2.3" } });
+    expect(screen.getByText("5")).toBeTruthy();
+    fireEvent.blur(input);
+    expect(input.value).toBe("$5.00");
+  });
 });

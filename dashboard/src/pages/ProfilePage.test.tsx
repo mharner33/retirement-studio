@@ -129,6 +129,28 @@ describe("ProfilePage wizard", () => {
     expect(screen.getByLabelText("First name")).toBeTruthy();
   });
 
+  it("shows a plan-to-age error next to the field and jumps to its step", async () => {
+    const detail = [
+      {
+        loc: ["body", "spouse", "plan_to_age"],
+        msg: "plan_to_age must be above current age",
+        type: "value_error",
+      },
+    ];
+    stubApi(json(404, {}), json(422, { detail }));
+    render(<ProfilePage />);
+    await screen.findByLabelText("First name");
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add spouse" }));
+    for (let i = 0; i < 4; i += 1) {
+      fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    const spouse = await screen.findByRole("group", { name: "Spouse" });
+    expect(within(spouse).getByText("plan_to_age must be above current age")).toBeTruthy();
+    expect(within(spouse).getByLabelText("Plan to age")).toBeTruthy();
+  });
+
   it("shows an error when the profile cannot be loaded", async () => {
     stubApi(json(500, {}));
     render(<ProfilePage />);

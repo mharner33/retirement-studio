@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend import db, settings
-from backend.profile.models import Household
+from backend.profile.models import Household, PlanToAgeError
 
 router = APIRouter(prefix="/api/profile")
 
@@ -38,8 +38,15 @@ def get_profile(conn: Conn) -> Household:
 def put_profile(household: Household, conn: Conn) -> Household:
     try:
         household.check_plan_to_age()
-    except ValueError as e:
-        raise HTTPException(422, str(e)) from e
+    except PlanToAgeError as e:
+        detail = [
+            {
+                "loc": ["body", e.role, "plan_to_age"],
+                "msg": str(e),
+                "type": "value_error",
+            }
+        ]
+        raise HTTPException(422, detail) from e
     conn.execute(
         "INSERT INTO profile (id, body) VALUES (1, ?) "
         "ON CONFLICT(id) DO UPDATE SET body = excluded.body",
