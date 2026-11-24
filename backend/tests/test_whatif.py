@@ -1,5 +1,5 @@
 from backend.engine.projection import Strategy
-from backend.engine.whatif import return_paths, success_rate
+from backend.engine.whatif import return_paths, success_rate, success_rates
 from backend.profile.models import Household
 from backend.rules.models import TaxRules
 
@@ -48,3 +48,16 @@ def test_success_rate_zero_when_spending_impossible(
     broke.spending.essential = 2_000_000
     paths = return_paths(broke, START, 20)
     assert success_rate(broke, STRATEGY, rules, START, paths) == 0.0
+
+
+def test_success_rates_batch_matches_single(
+    sample_household: Household, rules: TaxRules
+) -> None:
+    tight = sample_household.model_copy(deep=True)
+    tight.spending.essential = 80_000
+    other = STRATEGY.model_copy(update={"conversion_target": "none"})
+    paths = return_paths(tight, START, 40)
+    assert success_rates(tight, [STRATEGY, other], rules, START, paths) == [
+        success_rate(tight, STRATEGY, rules, START, paths),
+        success_rate(tight, other, rules, START, paths),
+    ]

@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from datetime import date, timedelta
 
 from fastapi import APIRouter, HTTPException, Request
@@ -6,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Request
 from backend.engine.projection import Projection, Strategy, project
 from backend.engine.search import RankedStrategy, rank
 from backend.engine.spending import safe_extra
-from backend.engine.whatif import return_paths, success_rate
+from backend.engine.whatif import success_rates
 from backend.plan.models import PlanOption, PlanResult
 from backend.profile.api import Conn, load_household
 from backend.profile.models import Household
@@ -25,26 +24,25 @@ def rules_stale(filename: str, today: date) -> bool:
     return today - dated > STALE_AFTER
 
 
-@dataclass(frozen=True)
-class _Context:
-    household: Household
-    rules: TaxRules
-    start_year: int
-    paths: list[list[float]]
-
-    def option(self, r: RankedStrategy) -> PlanOption:
-        """Success rate at base spending, on the shared seeded paths."""
-        h, rules, year = self.household, self.rules, self.start_year
-        p = r.projection
-        return PlanOption(
+def _options(
+    h: Household, rules: TaxRules, start_year: int, chosen: list[RankedStrategy]
+) -> list[PlanOption]:
+    """Success rate at base spending, all strategies on the same seeded paths
+    in one process pool."""
+    strategies = [r.strategy for r in chosen]
+    rates = success_rates(h, strategies, rules, start_year)
+    return [
+        PlanOption(
             strategy=r.strategy,
             label=r.strategy.label(),
-            lifetime_tax=p.lifetime_tax,
-            after_tax_end=p.after_tax_end,
-            shortfall_year=p.shortfall_year,
-            success_rate=success_rate(h, r.strategy, rules, year, self.paths),
-            safe_extra=safe_extra(h, r.strategy, rules, year),
+            lifetime_tax=r.projection.lifetime_tax,
+            after_tax_end=r.projection.after_tax_end,
+            shortfall_year=r.projection.shortfall_year,
+            success_rate=rate,
+            safe_extra=safe_extra(h, r.strategy, rules, start_year),
         )
+        for r, rate in zip(chosen, rates, strict=True)
+    ]
 
 
 @router.get("")
@@ -55,13 +53,15 @@ def plan(conn: Conn, request: Request) -> PlanResult:
     rules, filename = current_rules(conn, request.app.state.data_dir)
     today = date.today()
     ranked = rank(household, rules, today.year)
+    top = ranked[:TOP]
     baseline = next(r for r in ranked if r.strategy.conversion_target == "none")
-    ctx = _Context(household, rules, today.year, return_paths(household, today.year))
+    chosen = top if baseline in top else [*top, baseline]
+    options = _options(household, rules, today.year, chosen)
     return PlanResult(
         rules_file=filename,
         rules_stale=rules_stale(filename, today),
-        top=[ctx.option(r) for r in ranked[:TOP]],
-        baseline=ctx.option(baseline),
+        top=options[:TOP],
+        baseline=options[chosen.index(baseline)],
         best_rows=ranked[0].projection.rows,
     )
 

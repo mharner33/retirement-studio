@@ -3,7 +3,13 @@ from datetime import date
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.engine.projection import Projection, Strategy, YearRow, project
+from backend.engine.projection import (
+    Projection,
+    Strategy,
+    YearRow,
+    plan_years,
+    project,
+)
 from backend.engine.social_security import monthly_benefit
 from backend.engine.tax import TaxUnit, bracket_top, irmaa_annual, rules_for_year
 from backend.profile.models import Household, Person
@@ -44,6 +50,7 @@ def test_project_rows_span_to_last_plan_to_age(
     p = project(sample_household, strategy(), rules, START)
     # self born 1963 to 82 -> 2045; spouse born 1965 to 82 -> 2047
     assert [r.year for r in p.rows] == list(range(2026, 2048))
+    assert plan_years(sample_household, START) == len(p.rows)
     assert p.rows[0].ages == [63, 61]
     assert p.rows[-1].ages == [None, 82]
 

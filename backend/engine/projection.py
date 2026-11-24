@@ -210,6 +210,13 @@ class _Settlement:
     taxes: _Taxes
 
 
+def plan_years(h: Household, start_year: int) -> int:
+    """Years from `start_year` through the last person's plan-to age."""
+    people = (p for p in (h.self_, h.spouse) if p)
+    last = max(p.birth_date.year + p.plan_to_age for p in people)
+    return last - start_year + 1
+
+
 def project(
     h: Household,
     s: Strategy,
@@ -222,10 +229,9 @@ def project(
     `assumptions.return_rate` every year."""
     plan = _Plan(h, s, rules, members(h, s.claim_ages), start_year)
     portfolio = Portfolio(h.accounts)
-    last = max(m.last_year for m in plan.people)
     rows: list[YearRow] = []
     magis: list[float] = []
-    for index in range(last - start_year + 1):
+    for index in range(plan_years(h, start_year)):
         rate = h.assumptions.return_rate if returns is None else returns[index]
         row = _run_year(plan.year(index, magis), portfolio, rate)
         rows.append(row)
