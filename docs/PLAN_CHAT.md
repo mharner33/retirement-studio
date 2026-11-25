@@ -255,16 +255,16 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 
 **Files:** Modify `docs/STATUS.md`, `README.md` (one line on the Chat page).
 
-- [ ] `npm run container:up`; the Chat page loads at `localhost:8000`; a conversation survives `npm run container:down` and `container:up`.
-- [ ] Commit `docs: chat agent status`.
+- [x] `npm run container:up`; the Chat page loads at `localhost:8000`; a conversation survives `npm run container:down` and `container:up`. (checked with the built image on port 8124 and a scratch volume, so the running container and `./data` were not touched)
+- [x] Commit `docs: chat agent status`.
 
 **Phase 5 success criteria**
 - [ ] `npm run check` passes.
-- [ ] Container: the image builds, `/api/health` is ok, Chat loads, the conversation survives a restart, and a turn interrupted by `container:down` shows "This reply did not finish. Ask again." after `container:up`.
-- [ ] Live run by hand with `.env` (the only step that calls a real model), the owner's three questions in one conversation:
+- [x] Container: the image builds, `/api/health` is ok, Chat loads, the conversation survives a restart, and a turn interrupted by `container:down` shows "This reply did not finish. Ask again." after `container:up`. (same scratch container)
+- [x] Live run by hand with `.env` (the only step that calls a real model), the owner's three questions in one conversation: (run on a scratch data folder with the sample household; the card came on a follow-up request, see `docs/STATUS.md`)
   - "What if I retire at 65 instead of 63?": the reply compares both plans with figures that match the Plan page for each, cites the plan engine and offers a retirement age card. Apply it, and the Plan page reflects 65. (Then set it back in the form.)
   - "What is the average monthly spend for a retired couple with our savings level?": the reply gives the BLS age-group and income-band monthly figures and the household's planned monthly spending, citing the plan engine and the BLS URL.
   - "What are the estimated costs for Medicare/Medicaid at 65?": the reply gives Part B from the rules file, any Part D or Medigap figures with their official URL, and says Medicaid asset limits rule it out, citing the page.
   - No reply shows "Some figures could not be checked." for these three; if one does, record the figure and fix the tool or prompt.
   - Record the outcome in `docs/STATUS.md` without account details, plus any source URLs that refused fetches.
-- [ ] `docs/STATUS.md` describes the chat agent, its routes, `CHAT_AGENT=off`, and how to run it.
+- [x] `docs/STATUS.md` describes the chat agent, its routes, `CHAT_AGENT=off`, and how to run it.
