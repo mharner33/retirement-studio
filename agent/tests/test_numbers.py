@@ -34,3 +34,9 @@ def test_matches_negative_money_by_absolute_value() -> None:
 def test_reads_money_and_percent_tokens_in_tool_text() -> None:
     texts = ['{"balance": "$1,000.00", "rate": "4.5%", "n": 12}']
     assert unchecked_figures("$1,000.00 at 4.5%", texts) == []
+
+
+def test_bare_small_integers_in_tool_text_do_not_match() -> None:
+    tool = "year 2030 age 67 count 22 and 0.05 on 2026-11-25"
+    reply = "$2,030 and $67 and 22% and 5%"
+    assert sorted(unchecked_figures(reply, [tool])) == ["$67", "22%"]
