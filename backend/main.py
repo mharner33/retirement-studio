@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from backend import db, settings
 from backend.plan.api import router as plan_router
 from backend.profile.api import router as profile_router
+from backend.rules.api import router as rules_router
 
 DEFAULT_DIST = Path(__file__).resolve().parent.parent / "dashboard" / "dist"
 
@@ -21,6 +22,7 @@ def create_app(data_dir: Path | None = None, dist_dir: Path | None = None) -> Fa
 
     app.include_router(profile_router)
     app.include_router(plan_router)
+    app.include_router(rules_router)
 
     dist = dist_dir or DEFAULT_DIST
     if dist.is_dir():

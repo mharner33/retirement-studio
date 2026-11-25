@@ -86,3 +86,30 @@ def test_seed_rmd_row_for_1949_birth_year() -> None:
         if r.born_from <= 1949 and (r.born_to is None or r.born_to >= 1949)
     ]
     assert [r.age for r in rows] == [72]
+
+
+def test_current_rules_skips_missing_or_invalid_accepted(tmp_path: Path) -> None:
+    conn = db.connect(settings.db_path(tmp_path))
+    write_rules(tmp_path, "retirement_rules_2027-01-01.md", 2027)
+    (tmp_path / "rules" / "retirement_rules_2027-06-01.md").write_text("no json")
+    conn.executemany(
+        "INSERT INTO rules (filename, status, created_at) VALUES (?, 'accepted', ?)",
+        [
+            ("retirement_rules_2027-01-01.md", "2027-01-01"),
+            ("retirement_rules_2027-06-01.md", "2027-06-01"),
+            ("retirement_rules_2027-09-01.md", "2027-09-01"),
+        ],
+    )
+    conn.commit()
+    rules, filename = store.current_rules(conn, tmp_path)
+    assert (filename, rules.year) == ("retirement_rules_2027-01-01.md", 2027)
+    conn.execute("DELETE FROM rules WHERE filename LIKE '%2027-01-01%'")
+    assert store.current_rules(conn, tmp_path)[1] == store.SEED_FILENAME
+
+
+@pytest.mark.parametrize("fence", ["```JSON", "```json  ", "```json"])
+def test_fence_tolerates_case_spaces_and_crlf(fence: str) -> None:
+    block = SEED.read_text().split("```json\n", 1)[1].split("```", 1)[0]
+    text = f"# Rules\r\n\r\n{fence}\r\n{block}```\r\n".replace("\r\n", "\n")
+    assert store.parse_rules(text).year == 2026
+    assert store.parse_rules(text.replace("\n", "\r\n")).year == 2026

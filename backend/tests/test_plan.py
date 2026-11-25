@@ -6,7 +6,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import create_app
-from backend.plan.api import rules_stale
 from backend.tests.conftest import build_sample_household
 
 TIME_BUDGET = 20.0
@@ -33,7 +32,8 @@ def test_plan_endpoint_shape(timed_plan: tuple[int, dict[str, Any], float]) -> N
     assert status == 200
     assert set(data) == {"rules_file", "rules_stale", "top", "baseline", "best_rows"}
     assert data["rules_file"] == "retirement_rules_2026-01-01.md"
-    assert data["rules_stale"] == rules_stale(data["rules_file"], date.today())
+    expected = (date.today() - date(2026, 1, 1)).days > 90
+    assert data["rules_stale"] == expected
     assert len(data["top"]) == 5
     option_keys = {
         "strategy",
@@ -62,10 +62,3 @@ def test_plan_endpoint_runtime_under_20s(
     status, _, seconds = timed_plan
     assert status == 200
     assert seconds < TIME_BUDGET
-
-
-def test_rules_stale_after_90_days() -> None:
-    name = "retirement_rules_2026-01-01.md"
-    assert not rules_stale(name, date(2026, 3, 31))
-    assert rules_stale(name, date(2026, 4, 2))
-    assert rules_stale(name, date(2026, 11, 24))

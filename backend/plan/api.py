@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date
 
 from fastapi import APIRouter, HTTPException, Request
 
@@ -9,19 +9,12 @@ from backend.engine.whatif import success_rates
 from backend.plan.models import PlanOption, PlanResult
 from backend.profile.api import Conn, load_household
 from backend.profile.models import Household
+from backend.rules import store
 from backend.rules.models import TaxRules
-from backend.rules.store import current_rules
 
 router = APIRouter(prefix="/api/plan")
 
 TOP = 5
-STALE_AFTER = timedelta(days=90)
-
-
-def rules_stale(filename: str, today: date) -> bool:
-    """`filename` is `retirement_rules_YYYY-MM-DD.md`."""
-    dated = date.fromisoformat(filename.removesuffix(".md").rsplit("_", 1)[1])
-    return today - dated > STALE_AFTER
 
 
 def _options(
@@ -50,7 +43,7 @@ def plan(conn: Conn, request: Request) -> PlanResult:
     household = load_household(conn)
     if household is None:
         raise HTTPException(409, "No profile saved")
-    rules, filename = current_rules(conn, request.app.state.data_dir)
+    rules, filename = store.current_rules(conn, request.app.state.data_dir)
     today = date.today()
     ranked = rank(household, rules, today.year)
     top = ranked[:TOP]
@@ -59,7 +52,7 @@ def plan(conn: Conn, request: Request) -> PlanResult:
     options = _options(household, rules, today.year, chosen)
     return PlanResult(
         rules_file=filename,
-        rules_stale=rules_stale(filename, today),
+        rules_stale=store.status(conn, request.app.state.data_dir, today).stale,
         top=options[:TOP],
         baseline=options[chosen.index(baseline)],
         best_rows=ranked[0].projection.rows,
@@ -71,5 +64,5 @@ def project_plan(strategy: Strategy, conn: Conn, request: Request) -> Projection
     household = load_household(conn)
     if household is None:
         raise HTTPException(409, "No profile saved")
-    rules, _ = current_rules(conn, request.app.state.data_dir)
+    rules, _ = store.current_rules(conn, request.app.state.data_dir)
     return project(household, strategy, rules, date.today().year)
