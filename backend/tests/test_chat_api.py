@@ -344,3 +344,92 @@ def test_step_is_unmasked_for_display(client: TestClient, calls) -> None:
     send(client)
     client.put("/api/chat/step", json={"text": "Checking [YOU] at 65"})
     assert client.get("/api/chat").json()["step"] == "Checking Alex at 65"
+
+
+def test_apply_and_dismiss_return_unmasked_reason(client: TestClient, calls) -> None:
+    put_profile(client)
+    send(client)
+    masked = {**proposal(), "reason": "[YOU] works two more years"}
+    reply(client, [masked, masked])
+    cards = client.get("/api/chat").json()["messages"][-1]["changes"]
+    applied = client.post(f"/api/chat/changes/{cards[0]['id']}/apply").json()
+    dismissed = client.post(f"/api/chat/changes/{cards[1]['id']}/dismiss").json()
+    assert applied["reason"] == "Alex works two more years"
+    assert dismissed["reason"] == "Alex works two more years"
+
+
+def test_apply_remove_409_when_one_time_list_changed(client: TestClient, calls) -> None:
+    household = build_sample_household()
+    household.spending.one_time = [
+        OneTime(year=2030, amount=5_000, label="Roof"),
+        OneTime(year=2031, amount=8_000, label="Car"),
+    ]
+    client.put("/api/profile", json=household.model_dump(mode="json", by_alias=True))
+    send(client)
+    remove = {"changes": [{"op": "remove_one_time", "index": 0}], "reason": "No roof"}
+    reply(client, [remove])
+    household.spending.one_time = household.spending.one_time[1:]
+    client.put("/api/profile", json=household.model_dump(mode="json", by_alias=True))
+    res = client.post(f"/api/chat/changes/{card_id(client)}/apply")
+    assert res.status_code == 409
+    assert res.json()["detail"] == "The profile changed since this was proposed."
+    one_time = client.get("/api/profile").json()["spending"]["one_time"]
+    assert [x["label"] for x in one_time] == ["Car"]
+    assert client.get("/api/chat").json()["messages"][-1]["changes"][0]["status"] == (
+        "proposed"
+    )
+
+
+def test_apply_remove_when_one_time_list_unchanged(client: TestClient, calls) -> None:
+    household = build_sample_household()
+    household.spending.one_time = [OneTime(year=2030, amount=5_000, label="Roof")]
+    client.put("/api/profile", json=household.model_dump(mode="json", by_alias=True))
+    send(client)
+    remove = {"changes": [{"op": "remove_one_time", "index": 0}], "reason": "No roof"}
+    reply(client, [remove])
+    assert client.post(f"/api/chat/changes/{card_id(client)}/apply").status_code == 200
+    assert client.get("/api/profile").json()["spending"]["one_time"] == []
+
+
+def test_context_is_masked_with_current_terms(client: TestClient, calls) -> None:
+    put_profile(client)
+    send(client, "Should I move money to Acme")
+    reply(client, text="Acme fees are low")
+    client.post(
+        "/api/chat/reply",
+        json={
+            "text": "Ok",
+            "sources": [],
+            "tool_results": ["Acme pays $1,000.00"],
+            "unchecked": False,
+            "proposals": [],
+        },
+    )
+    household = build_sample_household()
+    household.mask_terms = ["Acme"]
+    client.put("/api/profile", json=household.model_dump(mode="json", by_alias=True))
+    context = client.get("/api/chat/context").json()
+    assert "Acme" not in str(context)
+    assert context[0]["text"] == "Should I move money to [MASKED]"
+
+
+def test_reply_unmasks_one_time_labels_before_storing(
+    client: TestClient, calls
+) -> None:
+    put_profile(client)
+    send(client)
+    add = {
+        "changes": [
+            {
+                "op": "add_one_time",
+                "item": {"year": 2030, "amount": 5000, "label": "[YOU] trip"},
+            }
+        ],
+        "reason": "A trip",
+    }
+    reply(client, [add])
+    card = client.get("/api/chat").json()["messages"][-1]["changes"][0]
+    assert card["lines"][0]["label"] == "One-time expense 2030: Alex trip"
+    assert client.post(f"/api/chat/changes/{card['id']}/apply").status_code == 200
+    one_time = client.get("/api/profile").json()["spending"]["one_time"]
+    assert one_time[0]["label"] == "Alex trip"

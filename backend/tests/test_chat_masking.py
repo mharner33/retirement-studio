@@ -35,3 +35,15 @@ def test_spouse_placeholder_unused_without_spouse() -> None:
     h = household(spouse=False)
     assert mask_for_model("Bob and Ann", h) == "Bob and [YOU]"
     assert unmask("[SPOUSE]", h) == "[SPOUSE]"
+
+
+def test_blank_first_name_masks_nothing() -> None:
+    h = household(self_name="  ")
+    assert mask_for_model("Ann's budget and Bob", h) == "Ann's budget and [SPOUSE]"
+    assert unmask("[YOU] and [SPOUSE]", h) == "[YOU] and Bob"
+
+
+def test_first_name_is_trimmed() -> None:
+    h = household(self_name="Ann ")
+    assert mask_for_model("Ann's budget", h) == "[YOU]'s budget"
+    assert unmask("[YOU] retires", h) == "Ann retires"

@@ -23,9 +23,11 @@ from backend.chat.models import (
 )
 from backend.plan.api import _context, plan_for
 from backend.plan.changes import (
+    AddOneTime,
     ChangeError,
     ChangeLine,
     ProfileChange,
+    RemoveOneTime,
     apply_changes,
     describe,
 )
@@ -96,8 +98,12 @@ def post_message(
     return {"status": "started"}
 
 
-def change_card(conn: sqlite3.Connection, change_id: int) -> ChangeCard:
-    return store.card(store.get_change(conn, change_id))  # type: ignore[arg-type]
+def change_card(
+    conn: sqlite3.Connection, change_id: int, household: Household
+) -> ChangeCard:
+    card = store.card(store.get_change(conn, change_id))  # type: ignore[arg-type]
+    card.reason = unmask(card.reason, household)
+    return card
 
 
 def proposed_change(conn: sqlite3.Connection, change_id: int) -> tuple:
@@ -125,22 +131,29 @@ def check_changes(changes: list[ProfileChange], conn: Conn) -> list[ChangeLine]:
 def apply_change(change_id: int, conn: Conn) -> ChangeCard:
     row = proposed_change(conn, change_id)
     household = require_profile(conn)
+    changes = store.changes_adapter.validate_json(row[4])
+    proposed = store.lines_adapter.validate_json(row[3])
     try:
-        updated = apply_changes(household, store.changes_adapter.validate_json(row[4]))
+        lines = describe(household, changes)
+        updated = apply_changes(household, changes)
     except ChangeError as e:
         raise HTTPException(422, str(e)) from e
+    for change, then, now in zip(changes, proposed, lines, strict=True):
+        if isinstance(change, RemoveOneTime) and then != now:
+            raise HTTPException(409, "The profile changed since this was proposed.")
     save_household(conn, updated)
     store.set_change_status(conn, change_id, "applied")
     conn.commit()
-    return change_card(conn, change_id)
+    return change_card(conn, change_id, household)
 
 
 @router.post("/changes/{change_id}/dismiss")
 def dismiss_change(change_id: int, conn: Conn) -> ChangeCard:
     proposed_change(conn, change_id)
+    household = require_profile(conn)
     store.set_change_status(conn, change_id, "dismissed")
     conn.commit()
-    return change_card(conn, change_id)
+    return change_card(conn, change_id, household)
 
 
 @router.delete("", status_code=204)
@@ -153,7 +166,14 @@ def delete_chat(conn: Conn) -> Response:
 
 @router.get("/context")
 def get_context(conn: Conn) -> list[ContextMessage]:
-    return store.context(conn)
+    """Mask again on read so names and mask_terms added since a message was
+    stored never reach the model."""
+    household = require_profile(conn)
+    context = store.context(conn)
+    for m in context:
+        m.text = mask_for_model(m.text, household)
+        m.tool_results = [mask_for_model(t, household) for t in m.tool_results]
+    return context
 
 
 @router.get("/profile")
@@ -175,6 +195,10 @@ def put_step(body: Step, conn: Conn) -> Response:
 @router.post("/reply")
 def post_reply(reply: Reply, conn: Conn) -> dict[str, str]:
     household = require_profile(conn)
+    for p in reply.proposals:
+        for c in p.changes:
+            if isinstance(c, AddOneTime):
+                c.item.label = unmask(c.item.label, household)
     try:
         described = [(p, describe(household, p.changes)) for p in reply.proposals]
     except ChangeError as e:
