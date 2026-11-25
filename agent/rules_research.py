@@ -1,6 +1,8 @@
+from contextlib import ExitStack
 from datetime import date
 
 import httpx
+import pymupdf
 from bs4 import BeautifulSoup
 from langchain.agents import create_agent
 from langchain_core.language_models import BaseChatModel
@@ -18,9 +20,8 @@ SOURCES = [
     "https://www.irs.gov/publications/p915",
     "https://www.irs.gov/pub/irs-pdf/p590b.pdf",
     "https://www.irs.gov/retirement-plans/plan-participant-employee/retirement-topics-required-minimum-distributions-rmds",
-    "https://www.ssa.gov/oact/quickcalc/earlyretire.html",
-    "https://www.ssa.gov/benefits/retirement/planner/delayret.html",
-    "https://www.ssa.gov/benefits/retirement/planner/applying7.html",
+    "https://www.law.cornell.edu/cfr/text/20/404.410",
+    "https://www.law.cornell.edu/cfr/text/20/404.313",
     "https://www.cms.gov/newsroom/fact-sheets/2026-medicare-parts-b-premiums-deductibles",
     "https://tax.colorado.gov/individual-income-tax-guide",
     "https://tax.colorado.gov/sites/default/files/documents/DR_0104EP_2026.pdf",
@@ -28,6 +29,10 @@ SOURCES = [
 ]
 
 MAX_PAGE_CHARS = 40_000
+USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+)
 
 SYSTEM_PROMPT = """You maintain the retirement tax rules file for Retirement Studio.
 Today's date is {today}.
@@ -55,27 +60,48 @@ Cover and verify:
   including the 55 to 64 AGI rule, and whether Colorado adds back the federal
   senior deduction
 
-Never invent figures. If a figure cannot be confirmed from a source, keep the
+If a source cannot be fetched, keep the current file's figures for that section
+unchanged and add one line under that section's heading: "Not refreshed on
+{today}: source unavailable." Never guess figures. Long PDFs such as Pub 590-B
+need fetch_page with find (for example "Uniform Lifetime"). If a figure cannot
+be confirmed from a source, keep the
 current value and say so in the text. When finished, reply with the file name
 returned by save_rules."""
 
 
 def _make_tools(client: httpx.Client, web: httpx.Client) -> list[BaseTool]:
     @tool
-    def fetch_page(url: str) -> str:
-        """Fetch an official source page and return its text."""
+    def fetch_page(url: str, find: str = "") -> str:
+        """Fetch an official source and return its text (PDFs are converted).
+
+        Output is cut at 40,000 characters. For long documents pass `find`, a
+        keyword, to start the text just before its first occurrence."""
         if url not in SOURCES:
             return f"Rejected: {url} is not in the allowed sources."
-        response = web.get(url, follow_redirects=True)
-        response.raise_for_status()
-        text = BeautifulSoup(response.text, "html.parser").get_text(" ", strip=True)
-        return text[:MAX_PAGE_CHARS]
+        try:
+            response = web.get(url, follow_redirects=True)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            return f"Error fetching {url}: {exc}"
+        if url.endswith(".pdf") or "application/pdf" in response.headers.get(
+            "content-type", ""
+        ):
+            with pymupdf.open(stream=response.content, filetype="pdf") as doc:
+                text = " ".join(str(page.get_text()) for page in doc)
+        else:
+            text = BeautifulSoup(response.text, "html.parser").get_text(" ", strip=True)
+        start = max(text.find(find) - 200, 0) if find else 0
+        return text[start : start + MAX_PAGE_CHARS]
 
     @tool
     def current_rules() -> str:
         """Return the current rules file as markdown."""
-        name = client.get("/api/rules/status").json()["current_file"]
-        return client.get(f"/api/rules/{name}").text
+        status = client.get("/api/rules/status")
+        status.raise_for_status()
+        name = status.json()["current_file"]
+        response = client.get(f"/api/rules/{name}")
+        response.raise_for_status()
+        return response.text
 
     @tool
     def save_rules(markdown: str) -> str:
@@ -94,7 +120,18 @@ def refresh(
     model: BaseChatModel | None = None,
     web: httpx.Client | None = None,
 ) -> str:
-    tools = _make_tools(client or make_client(), web or httpx.Client(timeout=30))
+    with ExitStack() as stack:
+        if client is None:
+            client = stack.enter_context(make_client())
+        if web is None:
+            web = stack.enter_context(
+                httpx.Client(timeout=30, headers={"User-Agent": USER_AGENT})
+            )
+        return _run(client, web, model)
+
+
+def _run(client: httpx.Client, web: httpx.Client, model: BaseChatModel | None) -> str:
+    tools = _make_tools(client, web)
     prompt = SYSTEM_PROMPT.format(
         today=date.today().isoformat(), sources="\n".join(SOURCES)
     )
