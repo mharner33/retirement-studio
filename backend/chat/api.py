@@ -1,5 +1,6 @@
 import importlib
 import logging
+import os
 import sqlite3
 from contextlib import closing
 from datetime import date
@@ -37,7 +38,10 @@ logger = logging.getLogger(__name__)
 
 def run_chat() -> None:
     """Start the chat agent. Imported lazily so the backend does not need the
-    agent stack, and so tests can patch this function."""
+    agent stack, and so tests can patch this function. CHAT_AGENT=off skips the
+    agent and leaves the turn working, so e2e never calls a model."""
+    if os.environ.get("CHAT_AGENT") == "off":
+        return
     try:
         importlib.import_module("agent.chat").respond()
     except Exception:
@@ -63,14 +67,16 @@ def require_profile(conn: sqlite3.Connection) -> Household:
 def get_chat(conn: Conn) -> ChatState:
     household = load_household(conn)
     messages = store.messages(conn)
+    step = store.turn_step(conn)
     if household:
+        step = unmask(step, household) if step else step
         for m in messages:
             m.text = unmask(m.text, household)
             for c in m.changes:
                 c.reason = unmask(c.reason, household)
     return ChatState(
         status=store.turn_status(conn),  # type: ignore[arg-type]
-        step=store.turn_step(conn),
+        step=step,
         messages=messages,
     )
 

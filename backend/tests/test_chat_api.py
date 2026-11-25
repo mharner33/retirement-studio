@@ -323,3 +323,24 @@ def test_get_without_profile_returns_stored_text(client: TestClient, calls) -> N
     assert client.get("/api/chat").json()["messages"][0]["text"] == (
         "Can [YOU] retire at 65"
     )
+
+
+def test_run_chat_off_leaves_turn_working(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def boom() -> None:
+        raise AssertionError("the agent must not run")
+
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("CHAT_AGENT", "off")
+    fake_agent(monkeypatch, boom)
+    put_profile(client)
+    send(client)
+    assert client.get("/api/chat").json()["status"] == "working"
+
+
+def test_step_is_unmasked_for_display(client: TestClient, calls) -> None:
+    put_profile(client)
+    send(client)
+    client.put("/api/chat/step", json={"text": "Checking [YOU] at 65"})
+    assert client.get("/api/chat").json()["step"] == "Checking Alex at 65"

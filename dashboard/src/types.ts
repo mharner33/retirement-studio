@@ -161,3 +161,39 @@ export interface StatementRow {
   extracted: ExtractedDocument | null;
   created_at: string;
 }
+
+export interface Source {
+  kind: "engine" | "rules" | "web";
+  label: string;
+  url: string | null;
+}
+
+export interface ChangeLine {
+  label: string;
+  kind: "money" | "age" | "rate";
+  old: number | null;
+  new: number | null;
+}
+
+export interface ChangeCard {
+  id: number;
+  reason: string;
+  status: "proposed" | "applied" | "dismissed";
+  lines: ChangeLine[];
+  error: string | null;
+}
+
+export interface ChatMessage {
+  id: number;
+  role: "user" | "assistant";
+  text: string;
+  sources: Source[];
+  unchecked: boolean;
+  changes: ChangeCard[];
+}
+
+export interface ChatState {
+  status: "idle" | "working" | "failed";
+  step: string | null;
+  messages: ChatMessage[];
+}
