@@ -102,3 +102,15 @@ def test_describe_walks_running_state(sample_household: Household) -> None:
             label="One-time expense 2030: Roof", kind="money", old=25_000, new=None
         ),
     ]
+
+
+def test_invalid_in_the_middle_valid_at_the_end(sample_household: Household) -> None:
+    changes: list[ProfileChange] = [
+        _set("self.plan_to_age", 40),
+        _set("self.plan_to_age", 90),
+    ]
+    assert apply_changes(sample_household, changes).self_.plan_to_age == 90
+    assert [(c.old, c.new) for c in describe(sample_household, changes)] == [
+        (82, 40),
+        (40, 90),
+    ]

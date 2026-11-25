@@ -88,20 +88,53 @@ def _one_time_label(item: OneTime) -> str:
     return f"One-time expense {item.year}: {item.label}"
 
 
-def apply_changes(h: Household, changes: list[ProfileChange]) -> Household:
+def _walk(
+    h: Household, changes: list[ProfileChange]
+) -> tuple[dict[str, Any], list[ChangeLine]]:
+    """Apply changes in order to a raw dict, reading each line's old value from
+    the running state. Validation of the result is left to the caller."""
     data: dict[str, Any] = h.model_dump(mode="json", by_alias=True)
     one_time: list[dict[str, Any]] = data["spending"]["one_time"]
+    lines: list[ChangeLine] = []
     for change in changes:
         if isinstance(change, SetField):
-            _check_path(h, change.path)
+            info = _check_path(h, change.path)
             section, key = change.path.split(".")
+            lines.append(
+                ChangeLine(
+                    label=info.label,
+                    kind=info.kind,
+                    old=data[section][key],
+                    new=change.value,
+                )
+            )
             data[section][key] = change.value
         elif isinstance(change, AddOneTime):
+            lines.append(
+                ChangeLine(
+                    label=_one_time_label(change.item),
+                    kind="money",
+                    old=None,
+                    new=change.item.amount,
+                )
+            )
             one_time.append(change.item.model_dump(mode="json"))
         elif 0 <= change.index < len(one_time):
-            del one_time[change.index]
+            item = OneTime.model_validate(one_time.pop(change.index))
+            lines.append(
+                ChangeLine(
+                    label=_one_time_label(item),
+                    kind="money",
+                    old=item.amount,
+                    new=None,
+                )
+            )
         else:
             raise ChangeError(f"There is no one-time expense number {change.index}")
+    return data, lines
+
+
+def _validated(data: dict[str, Any]) -> Household:
     try:
         updated = Household.model_validate(data)
         updated.check_plan_to_age()
@@ -114,41 +147,12 @@ def apply_changes(h: Household, changes: list[ProfileChange]) -> Household:
     return updated
 
 
-def _current(h: Household, path: str) -> float | None:
-    section, key = path.split(".")
-    owner = h.self_ if section == "self" else getattr(h, section)
-    value: float | None = getattr(owner, key)
-    return value
+def apply_changes(h: Household, changes: list[ProfileChange]) -> Household:
+    data, _ = _walk(h, changes)
+    return _validated(data)
 
 
 def describe(h: Household, changes: list[ProfileChange]) -> list[ChangeLine]:
-    lines: list[ChangeLine] = []
-    for change in changes:
-        lines.append(_line(h, change))
-        h = apply_changes(h, [change])
+    data, lines = _walk(h, changes)
+    _validated(data)
     return lines
-
-
-def _line(h: Household, change: ProfileChange) -> ChangeLine:
-    if isinstance(change, SetField):
-        info = _check_path(h, change.path)
-        return ChangeLine(
-            label=info.label,
-            kind=info.kind,
-            old=_current(h, change.path),
-            new=change.value,
-        )
-    if isinstance(change, AddOneTime):
-        return ChangeLine(
-            label=_one_time_label(change.item),
-            kind="money",
-            old=None,
-            new=change.item.amount,
-        )
-    items = h.spending.one_time
-    if not 0 <= change.index < len(items):
-        raise ChangeError(f"There is no one-time expense number {change.index}")
-    item = items[change.index]
-    return ChangeLine(
-        label=_one_time_label(item), kind="money", old=item.amount, new=None
-    )
