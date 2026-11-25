@@ -173,3 +173,30 @@ def test_current_rules_error_is_not_returned_as_rules() -> None:
         rules_research.refresh(
             http, model, web=_web_with(lambda _r: httpx.Response(200))
         )
+
+
+def test_pdf_url_with_html_body_lets_agent_continue(client: TestClient) -> None:
+    pdf_url = "https://www.irs.gov/pub/irs-pdf/p590b.pdf"
+    model = StubModel(
+        [
+            _call("fetch_page", {"url": pdf_url}, "c1"),
+            _call("save_rules", {"markdown": SEED.read_text()}, "c2"),
+            AIMessage("Saved"),
+        ]
+    )
+    web = _web_with(lambda _r: httpx.Response(200, html="<html>blocked</html>"))
+    assert rules_research.refresh(cast(httpx.Client, client), model, web=web) == "Saved"
+    read, saved = model.tool_messages()
+    assert read.startswith(f"Error reading {pdf_url}")
+    assert "filename" in saved
+
+
+def test_fetch_page_reports_missing_find(client: TestClient) -> None:
+    web = _web_with(lambda _r: httpx.Response(200, html="<p>hello world</p>"))
+    model = StubModel(
+        [_call("fetch_page", {"url": URL, "find": "zzz"}, "c1"), AIMessage("d")]
+    )
+    rules_research.refresh(cast(httpx.Client, client), model, web=web)
+    assert model.tool_messages()[0] == (
+        "'zzz' not found; showing the start of the document.\nhello world"
+    )

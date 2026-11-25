@@ -61,12 +61,22 @@ Cover and verify:
   senior deduction
 
 If a source cannot be fetched, keep the current file's figures for that section
-unchanged and add one line under that section's heading: "Not refreshed on
-{today}: source unavailable." Never guess figures. Long PDFs such as Pub 590-B
-need fetch_page with find (for example "Uniform Lifetime"). If a figure cannot
-be confirmed from a source, keep the
-current value and say so in the text. When finished, reply with the file name
+unchanged and add one line under that section's heading:
+"Not refreshed on {today}: source unavailable."
+Never guess figures. Long PDFs such as Pub 590-B need fetch_page with find (for
+example "Uniform Lifetime"). If a figure cannot be confirmed from a source, keep
+the current value and say so in the text. When finished, reply with the file name
 returned by save_rules."""
+
+
+def _page_text(url: str, response: httpx.Response) -> str:
+    content_type = response.headers.get("content-type", "")
+    if url.endswith(".pdf") or "application/pdf" in content_type:
+        with pymupdf.open(stream=response.content, filetype="pdf") as doc:
+            if not doc.is_pdf:
+                raise pymupdf.FileDataError("body is not a PDF")
+            return " ".join(str(page.get_text()) for page in doc)
+    return BeautifulSoup(response.text, "html.parser").get_text(" ", strip=True)
 
 
 def _make_tools(client: httpx.Client, web: httpx.Client) -> list[BaseTool]:
@@ -83,15 +93,17 @@ def _make_tools(client: httpx.Client, web: httpx.Client) -> list[BaseTool]:
             response.raise_for_status()
         except httpx.HTTPError as exc:
             return f"Error fetching {url}: {exc}"
-        if url.endswith(".pdf") or "application/pdf" in response.headers.get(
-            "content-type", ""
-        ):
-            with pymupdf.open(stream=response.content, filetype="pdf") as doc:
-                text = " ".join(str(page.get_text()) for page in doc)
-        else:
-            text = BeautifulSoup(response.text, "html.parser").get_text(" ", strip=True)
-        start = max(text.find(find) - 200, 0) if find else 0
-        return text[start : start + MAX_PAGE_CHARS]
+        try:
+            text = _page_text(url, response)
+        except pymupdf.FileDataError as exc:
+            return f"Error reading {url}: {exc}"
+        index = text.find(find) if find else 0
+        note = ""
+        if index < 0:
+            note = f"'{find}' not found; showing the start of the document.\n"
+            index = 0
+        start = max(index - 200, 0)
+        return note + text[start : start + MAX_PAGE_CHARS]
 
     @tool
     def current_rules() -> str:
