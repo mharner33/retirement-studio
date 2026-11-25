@@ -18,6 +18,29 @@ CREATE TABLE IF NOT EXISTS rules (
     status TEXT,
     created_at TEXT
 );
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id INTEGER PRIMARY KEY,
+    role TEXT,
+    text TEXT,
+    sources TEXT,
+    tool_results TEXT,
+    unchecked INTEGER,
+    created_at TEXT
+);
+CREATE TABLE IF NOT EXISTS chat_changes (
+    id INTEGER PRIMARY KEY,
+    message_id INTEGER,
+    changes TEXT,
+    reason TEXT,
+    status TEXT,
+    lines TEXT
+);
+CREATE TABLE IF NOT EXISTS chat_turn (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    status TEXT,
+    step TEXT
+);
+INSERT OR IGNORE INTO chat_turn (id, status) VALUES (1, 'idle');
 """
 
 
