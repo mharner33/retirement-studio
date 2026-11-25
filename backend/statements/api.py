@@ -1,6 +1,7 @@
 import importlib
 import logging
 import sqlite3
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
@@ -10,6 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, UploadFi
 from fastapi.responses import PlainTextResponse
 from pydantic import TypeAdapter
 
+from backend import db, settings
 from backend.profile.api import Conn, load_household, save_household
 from backend.profile.models import Account, Household
 from backend.statements import pdf
@@ -31,10 +33,19 @@ document_adapter = TypeAdapter(ExtractedDocument)
 def run_extract(statement_id: int) -> None:
     """Start the extraction agent. Imported lazily so the backend does not need
     the agent stack, and so tests can patch this function."""
+    document = None
     try:
-        importlib.import_module("agent.extraction").extract(statement_id)
+        document = importlib.import_module("agent.extraction").extract(statement_id)
     except Exception:
         logger.exception("statement extraction failed")
+    if document is None:
+        with closing(db.connect(settings.db_path(settings.data_dir()))) as conn:
+            conn.execute(
+                "UPDATE statements SET status = 'uploaded' "
+                "WHERE id = ? AND status = 'reading'",
+                (statement_id,),
+            )
+            conn.commit()
 
 
 def statements_dir(request: Request) -> Path:

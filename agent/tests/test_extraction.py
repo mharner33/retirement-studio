@@ -1,9 +1,15 @@
 from typing import cast
+from unittest.mock import patch
 
 import httpx
 import pymupdf
+import pytest
 from fastapi.testclient import TestClient
+from langchain.agents import create_agent
+from langchain.agents.structured_output import ToolStrategy
 from langchain_core.messages import AIMessage
+from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 
 from agent import extraction
 from agent.tests.stub_model import StubModel
@@ -98,3 +104,60 @@ def test_model_never_sees_unmasked_number(client: TestClient) -> None:
     assert "1234-5678-9012" not in seen
     assert "****9012" in seen
     assert "125000.00" in seen
+
+
+def test_toolstrategy_used_with_real_chat_model() -> None:
+    model = ChatOpenAI(model="openai/gpt-6-luna", api_key=SecretStr("x"))
+    with patch.object(extraction, "create_agent") as create:
+        create.return_value.invoke.return_value = {}
+        extraction.extract(1, _fake_text_client(), model)
+    strategy = create.call_args.kwargs["response_format"]
+    assert isinstance(strategy, ToolStrategy)
+    agent = create_agent(model, tools=[], response_format=strategy)
+    assert agent is not None
+
+
+def _fake_text_client(put_status: int = 200) -> httpx.Client:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":
+            return httpx.Response(200, text="Ending balance 1.00")
+        return httpx.Response(put_status, text="nope")
+
+    return httpx.Client(transport=httpx.MockTransport(handler), base_url="http://test")
+
+
+def test_missing_structured_response_returns_none(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with patch.object(extraction, "create_agent") as create:
+        create.return_value.invoke.return_value = {"messages": []}
+        assert extraction.extract(9, _fake_text_client(), _answer(ACCOUNT)) is None
+    assert "statement 9" in caplog.text
+
+
+def test_put_failure_returns_none_and_logs(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    model = _answer(ACCOUNT)
+    assert extraction.extract(5, _fake_text_client(500), model) is None
+    assert "statement 5" in caplog.text
+    assert "nope" in caplog.text
+
+
+def test_created_client_is_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    created = _fake_text_client()
+    monkeypatch.setattr(extraction, "make_client", lambda: created)
+    extraction.extract(1, None, _answer(ACCOUNT))
+    assert created.is_closed
+
+
+def test_injected_client_stays_open() -> None:
+    injected = _fake_text_client()
+    extraction.extract(1, injected, _answer(ACCOUNT))
+    assert not injected.is_closed
+
+
+def test_no_text_logs(client: TestClient, caplog: pytest.LogCaptureFixture) -> None:
+    sid = _upload(client, _pdf([]))
+    _extract(client, sid, StubModel([]))
+    assert f"statement {sid} has no readable text" in caplog.text

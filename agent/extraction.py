@@ -3,6 +3,7 @@ from contextlib import ExitStack
 
 import httpx
 from langchain.agents import create_agent
+from langchain.agents.structured_output import ToolStrategy
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 from pydantic import TypeAdapter
@@ -59,12 +60,24 @@ def extract(
             model or make_model(),
             tools=[],
             system_prompt=SYSTEM_PROMPT,
-            response_format=ExtractedStatement | ExtractedSsStatement,
+            response_format=ToolStrategy(ExtractedStatement | ExtractedSsStatement),
         )
         result = agent.invoke({"messages": [HumanMessage(text.text)]})
-        document = result["structured_response"]
+        document = result.get("structured_response")
+        if document is None:
+            logger.warning(
+                "model returned no extraction for statement %s", statement_id
+            )
+            return None
         body = document_adapter.dump_python(document, mode="json")
-        client.put(
-            f"/api/statements/{statement_id}/extraction", json=body
-        ).raise_for_status()
+        response = client.put(f"/api/statements/{statement_id}/extraction", json=body)
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError:
+            logger.exception(
+                "could not store extraction for statement %s: %s",
+                statement_id,
+                response.text,
+            )
+            return None
         return document

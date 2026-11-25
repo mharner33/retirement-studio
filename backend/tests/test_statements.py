@@ -295,16 +295,49 @@ def test_extract_runs_agent_in_background(
     assert client.get("/api/statements").json()[0]["status"] == "reading"
 
 
-def test_run_extract_logs_failure(caplog: pytest.LogCaptureFixture) -> None:
-    statements_api.run_extract(1)
-    assert "statement extraction failed" in caplog.text
-
-
-def test_run_extract_calls_agent(monkeypatch: pytest.MonkeyPatch) -> None:
-    calls: list[int] = []
+def fake_extraction(monkeypatch: pytest.MonkeyPatch, extract: object) -> None:
     module = types.ModuleType("agent.extraction")
-    module.extract = calls.append  # type: ignore[attr-defined]
+    module.extract = extract  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "agent.extraction", module)
+
+
+def test_run_extract_logs_failure_and_resets_status(
+    client: TestClient,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    def boom(_id: int) -> None:
+        raise RuntimeError("boom")
+
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    fake_extraction(monkeypatch, boom)
+    sid = new_statement(client)
+    client.post(f"/api/statements/{sid}/extract")
+    assert "statement extraction failed" in caplog.text
+    assert client.get("/api/statements").json()[0]["status"] == "uploaded"
+
+
+def test_run_extract_none_resets_reading_but_keeps_no_text(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    fake_extraction(monkeypatch, lambda _id: None)
+    sid = new_statement(client)
+    client.post(f"/api/statements/{sid}/extract")
+    assert client.get("/api/statements").json()[0]["status"] == "uploaded"
+    blank = upload(client, ("blank.pdf", make_pdf(None))).json()[0]["id"]
+    client.get(f"/api/statements/{blank}/text")
+    statements_api.run_extract(blank)
+    assert client.get("/api/statements").json()[1]["status"] == "no_text"
+
+
+def test_run_extract_calls_agent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[int] = []
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    fake_extraction(monkeypatch, lambda i: calls.append(i) or object())
     statements_api.run_extract(7)
     assert calls == [7]
 
