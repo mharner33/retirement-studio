@@ -47,6 +47,7 @@ export function ChatPage() {
   const [chat, setChat] = useState<ChatState | null>(null);
   const [noProfile, setNoProfile] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [actionError, setActionError] = useState(false);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -87,12 +88,13 @@ export function ChatPage() {
 
   async function send(): Promise<void> {
     setBusy(true);
+    setActionError(false);
     try {
       await postJson("/api/chat/messages", { text: draft.trim() });
       setDraft("");
     } catch (err) {
       if (err instanceof ApiError && err.detail === "No profile saved") setNoProfile(true);
-      else if (!(err instanceof ApiError && err.status === 409)) setFailed(true);
+      else if (!(err instanceof ApiError && err.status === 409)) setActionError(true);
     }
     await reload();
     setBusy(false);
@@ -100,10 +102,11 @@ export function ChatPage() {
 
   async function restart(): Promise<void> {
     setBusy(true);
+    setActionError(false);
     try {
       await deleteRequest("/api/chat");
     } catch {
-      setFailed(true);
+      setActionError(true);
     }
     await reload();
     setBusy(false);
@@ -135,6 +138,11 @@ export function ChatPage() {
   return (
     <>
       <h2>Chat</h2>
+      {actionError && (
+        <p className="error" role="alert">
+          That did not go through. Try again in a moment.
+        </p>
+      )}
       {failed && (
         <p className="error" role="alert">
           The chat could not be reached. Try again in a moment.

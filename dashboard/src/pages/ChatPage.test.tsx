@@ -202,4 +202,29 @@ describe("ChatPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(await screen.findByText("Complete your profile first")).toBeTruthy();
   });
+
+  it("keeps the error visible when Send fails and the reload succeeds", async () => {
+    const server = newServer(idle([]));
+    render(<ChatPage />);
+    const box = await screen.findByPlaceholderText("Ask about your plan");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_path: string, init?: RequestInit) =>
+        Promise.resolve(
+          init?.method === "POST"
+            ? new Response("{}", { status: 500 })
+            : new Response(JSON.stringify(server.state)),
+        ),
+      ),
+    );
+    fireEvent.change(box, { target: { value: "Hello" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "That did not go through. Try again in a moment.",
+    );
+    await vi.waitFor(() => {
+      expect(button("Send").disabled).toBe(false);
+    });
+    expect(screen.getByRole("alert")).toBeTruthy();
+  });
 });
