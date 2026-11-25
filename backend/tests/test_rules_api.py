@@ -47,13 +47,19 @@ def test_post_malformed_rules_422_keeps_current(
     assert not (tmp_path / "rules").exists()
 
 
-def test_accept_makes_current(client: TestClient, new_text: str) -> None:
+def test_accept_makes_current(
+    client: TestClient, new_text: str, tmp_path: Path
+) -> None:
     client.post("/api/rules", json={"markdown": new_text})
     res = client.post(f"/api/rules/{NEW_NAME}/accept")
     assert res.status_code == 200
     assert res.json()["current_file"] == NEW_NAME
     assert res.json()["pending_file"] is None
-    assert client.get("/api/plan").status_code == 409  # still routes fine
+    rules, filename = store.current_rules(
+        db.connect(settings.db_path(tmp_path)), tmp_path
+    )
+    assert filename == NEW_NAME
+    assert rules.federal_brackets["mfj"][1].up_to == 100_900
 
 
 def test_accept_unknown_404_and_invalid_file_422(
@@ -124,7 +130,11 @@ def test_same_day_pending_overwritten_accepted_gets_suffix(tmp_path: Path) -> No
     conn = db.connect(settings.db_path(tmp_path))
     today = date(2026, 11, 24)
     first = store.save_pending(conn, tmp_path, SEED_TEXT, today)
-    again = store.save_pending(conn, tmp_path, SEED_TEXT.replace("2026", "2026"), today)
+
+    edited = SEED_TEXT.replace("Seed rules file", "Edited rules file", 1)
+    assert edited != SEED_TEXT
+    again = store.save_pending(conn, tmp_path, edited, today)
+    assert (tmp_path / "rules" / again).read_text() == edited
     assert first == again == "retirement_rules_2026-11-24.md"
     assert conn.execute("SELECT COUNT(*) FROM rules").fetchone()[0] == 1
     store.accept(conn, tmp_path, first)
@@ -170,3 +180,52 @@ def test_run_refresh_calls_agent(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_app_factory_runs(tmp_path: Path) -> None:
     assert create_app(tmp_path) is not None
+
+
+def test_refresh_agent_failure_does_not_propagate(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    research = types.ModuleType("agent.rules_research")
+
+    def boom(client: object, model: object) -> None:
+        raise RuntimeError("model down")
+
+    research.refresh = boom  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "agent.rules_research", research)
+    monkeypatch.setattr("agent.model.make_model", lambda: "model")
+    monkeypatch.setattr("agent.backend_client.make_client", FakeClient)
+    rules_api.run_refresh()
+    assert "rules refresh failed" in caplog.text
+
+
+def test_refresh_missing_agent_module_is_logged(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setitem(sys.modules, "agent.rules_research", None)
+    rules_api.run_refresh()
+    assert "rules refresh failed" in caplog.text
+
+
+def test_traversal_and_unknown_names_are_404(client: TestClient) -> None:
+    evil = "..%2F..%2Fetc%2Fpasswd"
+    assert client.get(f"/api/rules/{evil}").status_code == 404
+    assert client.post(f"/api/rules/{evil}/accept").status_code == 404
+
+
+def test_file_on_disk_but_not_in_db_is_refused(
+    client: TestClient, tmp_path: Path
+) -> None:
+    (tmp_path / "rules").mkdir()
+    name = "retirement_rules_2027-01-01.md"
+    (tmp_path / "rules" / name).write_text(SEED_TEXT)
+    assert client.get(f"/api/rules/{name}").status_code == 404
+    assert client.post(f"/api/rules/{name}/accept").status_code == 404
+
+
+def test_accept_seed_404_and_already_accepted_409(
+    client: TestClient, new_text: str
+) -> None:
+    assert client.post(f"/api/rules/{store.SEED_FILENAME}/accept").status_code == 404
+    client.post("/api/rules", json={"markdown": new_text})
+    assert client.post(f"/api/rules/{NEW_NAME}/accept").status_code == 200
+    assert client.post(f"/api/rules/{NEW_NAME}/accept").status_code == 409

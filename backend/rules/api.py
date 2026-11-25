@@ -1,4 +1,5 @@
 import importlib
+import logging
 from datetime import date
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
@@ -9,6 +10,7 @@ from backend.profile.api import Conn
 from backend.rules import store
 
 router = APIRouter(prefix="/api/rules")
+logger = logging.getLogger(__name__)
 
 
 class RulesUpload(BaseModel):
@@ -22,11 +24,14 @@ class Saved(BaseModel):
 def run_refresh() -> None:
     """Start the research agent. Imported lazily so the backend does not need
     the agent stack, and so tests can patch this function."""
-    research = importlib.import_module("agent.rules_research")
-    make_client = importlib.import_module("agent.backend_client").make_client
-    make_model = importlib.import_module("agent.model").make_model
-    with make_client() as client:
-        research.refresh(client, make_model())
+    try:
+        research = importlib.import_module("agent.rules_research")
+        make_client = importlib.import_module("agent.backend_client").make_client
+        make_model = importlib.import_module("agent.model").make_model
+        with make_client() as client:
+            research.refresh(client, make_model())
+    except Exception:
+        logger.exception("rules refresh failed")
 
 
 @router.get("/status")
@@ -67,6 +72,8 @@ def accept(filename: str, conn: Conn, request: Request) -> store.RulesStatus:
         store.accept(conn, data_dir, filename)
     except store.RulesNotFoundError as e:
         raise HTTPException(404, "Unknown rules file") from e
+    except store.RulesStateError as e:
+        raise HTTPException(409, str(e)) from e
     except store.RulesFormatError as e:
         raise HTTPException(422, str(e)) from e
     return store.status(conn, data_dir, date.today())

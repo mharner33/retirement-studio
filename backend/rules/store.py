@@ -129,9 +129,21 @@ def read_markdown(conn: sqlite3.Connection, data_dir: Path, filename: str) -> st
         raise RulesNotFoundError(filename) from e
 
 
+class RulesStateError(ValueError):
+    pass
+
+
 def accept(conn: sqlite3.Connection, data_dir: Path, filename: str) -> None:
-    """Re-parse the file and mark it accepted. Raises RulesNotFoundError or
+    """Re-parse a pending file and mark it accepted. Raises RulesNotFoundError
+    (not in the table, so also the seed), RulesStateError (not pending) or
     RulesFormatError, leaving the row unchanged."""
+    row = conn.execute(
+        "SELECT status FROM rules WHERE filename = ?", (filename,)
+    ).fetchone()
+    if row is None:
+        raise RulesNotFoundError(filename)
+    if row[0] != "pending":
+        raise RulesStateError(f"{filename} is already {row[0]}")
     parse_rules(read_markdown(conn, data_dir, filename))
     conn.execute("UPDATE rules SET status = 'accepted' WHERE filename = ?", (filename,))
     conn.commit()
