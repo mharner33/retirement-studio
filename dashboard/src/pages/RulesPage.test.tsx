@@ -207,6 +207,17 @@ describe("RulesPage", () => {
     expect(signals[0]?.aborted).toBe(true);
   });
 
+  it("shows the review again when a different pending file arrives after Keep current", async () => {
+    const server: Server = { status: pending, calls: [] };
+    serve(server);
+    render(<RulesPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Keep current" }));
+    expect(screen.queryByRole("table", { name: "Pending changes" })).toBeNull();
+    server.status = { ...pending, pending_file: "retirement_rules_2027-02-24.md" };
+    fireEvent.click(screen.getByRole("button", { name: "Refresh rules" }));
+    expect(await screen.findByRole("table", { name: "Pending changes" })).toBeTruthy();
+  });
+
   it("starts a refresh", async () => {
     const server: Server = { status: current, calls: [] };
     serve(server);

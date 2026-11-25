@@ -1,6 +1,6 @@
 # Status
 
-Phases 1 to 6 (skeleton, household profile, rules file and projection engine, strategy search and Plan page, rules research agent and Rules page, statement extraction and container release) are built. Two criteria stay open: one Phase 3 criterion (see below) and the Phase 6 live run with real statements (see Phase 6 checks). The profile can be entered, saved and reloaded. `GET /api/plan` ranks strategies, and the Plan page shows the best one, a comparison table, a balance chart and the year-by-year table.
+Phases 1 to 6 (skeleton, household profile, rules file and projection engine, strategy search and Plan page, rules research agent and Rules page, statement extraction and container release) are built. One criterion stays open: the Phase 6 live run with real statements (see Phase 6 checks). The profile can be entered, saved and reloaded. `GET /api/plan` ranks strategies, and the Plan page shows the best one, a comparison table, a balance chart and the year-by-year table.
 
 ## What exists
 
@@ -31,7 +31,7 @@ Phases 1 to 6 (skeleton, household profile, rules file and projection engine, st
 
 ## Phase 3 checks
 
-- Projection call: post with `-H 'content-type: application/json'`. Without it, curl sends form data and FastAPI answers 422. With the sample profile saved, the fill-12% strategy (63 to 74, taxable first, claim 67/67) returns rows 2026 to 2047 and converts $133,000.00 in 2026 (age 63). Its `rmd` stays zero, because that strategy draws the 401(k) down to $0.00 by 2035. With `"conversion_target":"none"`, RMDs start in 2038 as expected (age 75 for 1963). That criterion stays unticked in `docs/PLAN.md` until the expectation is settled.
+- Projection call: post with `-H 'content-type: application/json'`. Without it, curl sends form data and FastAPI answers 422. With the sample profile saved, the fill-12% strategy (63 to 74, taxable first, claim 67/67) returns rows 2026 to 2047 and converts $133,000.00 in 2026 (age 63). Its `rmd` stays zero, because that strategy draws the 401(k) down to $0.00 by 2035. With `"conversion_target":"none"`, RMDs start in 2038 as expected (age 75 for 1963). The criterion was amended to match and is ticked in `docs/PLAN.md`.
 - Hand check of federal tax, 2026 row of that fill-12% projection (mfj, ages 63 and 61, seed rules, nobody 65 or older):
   - Ordinary income $133,000.00 (the conversion) less the $32,200.00 standard deduction gives ordinary taxable income of $100,800.00.
   - 10%: $24,800.00 × 0.10 = $2,480.00. 12%: ($100,800.00 − $24,800.00) × 0.12 = $9,120.00. Ordinary tax is $11,600.00.

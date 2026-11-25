@@ -13,10 +13,19 @@ const STATUS_LABELS: Record<StatementRow["status"], string> = {
 
 const POLL_MS = 3000;
 
+const GENERIC_ERROR = "Something went wrong. Try again in a moment.";
+
 function errorText(err: unknown): string {
-  return err instanceof ApiError && typeof err.detail === "string"
-    ? err.detail
-    : "Something went wrong. Try again in a moment.";
+  if (!(err instanceof ApiError)) return GENERIC_ERROR;
+  if (typeof err.detail === "string") return err.detail;
+  if (Array.isArray(err.detail)) {
+    const first: unknown = err.detail[0];
+    if (typeof first === "object" && first !== null && "msg" in first) {
+      const msg: unknown = first.msg;
+      if (typeof msg === "string") return msg;
+    }
+  }
+  return GENERIC_ERROR;
 }
 
 function StatementTable({ rows }: Readonly<{ rows: StatementRow[] | null }>) {
@@ -137,12 +146,15 @@ export function StatementsPage() {
 
   async function extractAll(ids: number[]): Promise<void> {
     setBusy(true);
-    try {
-      for (const id of ids) await postJson(`/api/statements/${String(id)}/extract`);
-      setError(null);
-    } catch (err) {
-      setError(errorText(err));
+    const messages: string[] = [];
+    for (const id of ids) {
+      try {
+        await postJson(`/api/statements/${String(id)}/extract`);
+      } catch (err) {
+        messages.push(errorText(err));
+      }
     }
+    setError(messages[0] ?? null);
     setBusy(false);
     await reload();
   }
@@ -205,8 +217,8 @@ export function StatementsPage() {
         </div>
         {results.length > 0 && (
           <ul aria-label="Upload results" className="results">
-            {results.map((r) => (
-              <li key={r.filename} className={r.error ? "error" : undefined}>
+            {results.map((r, i) => (
+              <li key={`${String(i)}-${r.filename}`} className={r.error ? "error" : undefined}>
                 {`${r.filename}: ${r.error ?? "Saved"}`}
               </li>
             ))}
@@ -233,6 +245,7 @@ export function StatementsPage() {
         r.extracted === null ? null : (
           <StatementReview
             key={r.id}
+            id={r.id}
             filename={r.filename}
             document={r.extracted}
             busy={busy}

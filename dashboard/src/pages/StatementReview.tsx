@@ -4,6 +4,7 @@ import { KIND_LABELS } from "../components/kinds";
 import type { ExtractedAccount, ExtractedDocument, ExtractedSs } from "../types";
 
 interface Props {
+  id: number;
   filename: string;
   document: ExtractedDocument;
   busy: boolean;
@@ -104,9 +105,10 @@ function AccountRows({
 }
 
 function SocialSecurityFields({
+  id,
   doc,
   onChange,
-}: Readonly<{ doc: ExtractedSs; onChange: (next: ExtractedSs) => void }>) {
+}: Readonly<{ id: number; doc: ExtractedSs; onChange: (next: ExtractedSs) => void }>) {
   return (
     <>
       <fieldset className="section">
@@ -115,7 +117,7 @@ function SocialSecurityFields({
           <label key={who} className="check">
             <input
               type="radio"
-              name="person"
+              name={`person-${String(id)}`}
               checked={doc.person === who}
               onChange={() => {
                 onChange({ ...doc, person: who });
@@ -152,6 +154,7 @@ function SocialSecurityFields({
 }
 
 export function StatementReview({
+  id,
   filename,
   document,
   busy,
@@ -171,7 +174,7 @@ export function StatementReview({
           }}
         />
       ) : (
-        <SocialSecurityFields doc={draft} onChange={setDraft} />
+        <SocialSecurityFields id={id} doc={draft} onChange={setDraft} />
       )}
       <p className="secondary">Nothing is saved until you accept.</p>
       <div className="actions">

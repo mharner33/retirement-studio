@@ -19,6 +19,5 @@ IMPORTANT: before you plan, build or change anything in the product, or answer q
 
 - `docs/`: the main documentation for the product build
 - `backend/`, `agent/`, `dashboard/` and `e2e/`: the product
-- `context/`: data governance's files, which become UnderCover's context layer on Week 3 Day 3
 - `data/`: directory for users retirement documents (401K, IRA etc) as well as any IRS retirement rules
 

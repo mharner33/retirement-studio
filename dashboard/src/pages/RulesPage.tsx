@@ -87,7 +87,7 @@ export function RulesPage() {
     try {
       await postJson("/api/rules/refresh");
       setStarted(true);
-      setError(null);
+      await reload();
     } catch (err) {
       setError(errorText(err));
     }

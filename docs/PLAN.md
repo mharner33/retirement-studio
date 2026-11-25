@@ -129,7 +129,7 @@ Builder's calls fixed here: stdlib `sqlite3` (no ORM); the household profile is 
 - [x] `npm run check` passes (Python and TS coverage both ≥80%, e2e green).
 - [x] `npm run dev`, then `curl -s localhost:8000/api/health` → `{"status":"ok"}`.
 - [x] `podman build -t retirement-studio -f Containerfile .` succeeds; `podman compose up -d`, then `curl -s localhost:8000/api/health` → `{"status":"ok"}`, and `curl -s localhost:8000/` returns HTML containing `<div id="root">`.
-- [x] Playwright MCP: the dashboard at `localhost:5173` shows "Backend is up" in both themes, and the colors match `docs/BRAND.md`.
+- [x] Playwright MCP: the dashboard at `localhost:5173` shows "Backend is up" in both themes, and the colors match `docs/BRAND.md`. (checked with scripted Playwright screenshots; no MCP server in this environment)
 - [x] `git commit` on a staged file runs the lefthook checks (visible in output).
 
 ---
@@ -165,7 +165,7 @@ Builder's calls fixed here: stdlib `sqlite3` (no ORM); the household profile is 
 **Phase 2 success criteria**
 - [x] `npm run check` passes.
 - [x] `curl -X PUT localhost:8000/api/profile -d @sample.json` followed by `GET` returns the same body; a negative balance returns 422 with a `balance` error.
-- [x] Playwright MCP: complete the six steps, reload, every value is shown with money as `$900,000.00`; the dark theme reads correctly.
+- [x] Playwright MCP: complete the six steps, reload, every value is shown with money as `$900,000.00`; the dark theme reads correctly. (checked with scripted Playwright screenshots; no MCP server in this environment)
 
 ---
 
@@ -293,7 +293,7 @@ Yearly order (fixed here because the tests do not decide it): (1) wages and 401(
 - [x] `npm run check` passes.
 - [x] `time curl -s localhost:8000/api/plan` finishes in under 20 s for the sample profile. The response has 5 `top` entries, each with `0 <= success_rate <= 1` and `safe_extra >= 0`, and the top entry's `after_tax_end` is at least the baseline's.
 - [x] Two identical `GET /api/plan` calls return identical JSON.
-- [x] Playwright MCP: the Plan page shows the headline, comparison table, year table and chart in both themes, with no exclamation marks in the text.
+- [x] Playwright MCP: the Plan page shows the headline, comparison table, year table and chart in both themes, with no exclamation marks in the text. (checked with scripted Playwright screenshots; no MCP server in this environment)
 
 ---
 
@@ -352,7 +352,7 @@ Yearly order (fixed here because the tests do not decide it): (1) wages and 401(
 - [x] `npm run check` passes.
 - [x] `curl -X POST localhost:8000/api/rules -d '{"markdown":"no json"}'` → 422, and `GET /api/rules/status` still shows the seed.
 - [x] Live run, the only step that calls a real model, done by hand with `.env` set: `uv run python -c "from agent.rules_research import refresh; print(refresh())"` creates a pending file in `data/rules/` whose JSON validates, and the Rules page lists its changes. Record the outcome and cost in `docs/STATUS.md`.
-- [x] Playwright MCP: the review flow from the e2e test works in both themes.
+- [x] Playwright MCP: the review flow from the e2e test works in both themes. (checked with scripted Playwright screenshots; no MCP server in this environment)
 
 ---
 
@@ -429,5 +429,5 @@ Yearly order (fixed here because the tests do not decide it): (1) wages and 401(
 - [x] `npm run check` passes.
 - [x] `podman build` and `podman compose up -d` work. Inside the container, `/api/health` is ok, the dashboard loads at `localhost:8000`, a profile saved through the UI survives `podman compose down && podman compose up -d` (stored in `./data/studio.db`), and an uploaded PDF appears in `./data/statements/`.
 - [ ] Live run by hand with `.env`: upload one real account statement and one real Social Security statement together, run "Extract all", review, accept, and the Plan page updates. Record the outcome in `docs/STATUS.md` with no account details.
-- [x] Playwright MCP: Profile, Plan, Rules and Statements pages all render in both themes; money everywhere looks like `$1,250.00`; no exclamation marks.
+- [x] Playwright MCP: Profile, Plan, Rules and Statements pages all render in both themes; money everywhere looks like `$1,250.00`; no exclamation marks. (checked with scripted Playwright screenshots; no MCP server in this environment)
 - [x] `docs/STATUS.md` describes everything built and how to run it; the chat agent is listed as next, in `docs/PLAN_CHAT.md`.

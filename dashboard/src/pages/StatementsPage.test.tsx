@@ -185,6 +185,63 @@ describe("StatementsPage", () => {
     expect(server.posts[0]?.body).toMatchObject({ person: "spouse", monthly_at_62: 1500 });
   });
 
+  it("shows the message from a list-style 422 detail", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_path: string, init?: RequestInit) =>
+        Promise.resolve(
+          (init?.method ?? "GET") === "GET"
+            ? new Response(JSON.stringify([row(1, "pending_review", account)]))
+            : new Response(
+                JSON.stringify({
+                  detail: [{ loc: ["body", "person"], msg: "The profile has no spouse" }],
+                }),
+                { status: 422 },
+              ),
+        ),
+      ),
+    );
+    render(<StatementsPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Accept" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("The profile has no spouse");
+  });
+
+  it("keeps each Social Security review's own person choice", async () => {
+    newServer([row(1, "pending_review", social), row(2, "pending_review", social)]);
+    render(<StatementsPage />);
+    const first = await screen.findByRole("region", { name: "Review s1.pdf" });
+    const second = screen.getByRole("region", { name: "Review s2.pdf" });
+    fireEvent.click(within(first).getByLabelText("You"));
+    fireEvent.click(within(second).getByLabelText("Spouse"));
+    expect(within(first).getByLabelText<HTMLInputElement>("You").checked).toBe(true);
+    expect(within(second).getByLabelText<HTMLInputElement>("Spouse").checked).toBe(true);
+    expect(within(second).getByLabelText<HTMLInputElement>("You").checked).toBe(false);
+  });
+
+  it("keeps extracting after one file fails and shows the error", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((path: string, init?: RequestInit) => {
+        if ((init?.method ?? "GET") === "GET") {
+          return Promise.resolve(
+            new Response(JSON.stringify([row(1, "uploaded", null), row(2, "uploaded", null)])),
+          );
+        }
+        calls.push(path);
+        return Promise.resolve(
+          path.includes("/1/")
+            ? new Response(JSON.stringify({ detail: "Unknown statement" }), { status: 404 })
+            : new Response("{}", { status: 202 }),
+        );
+      }),
+    );
+    render(<StatementsPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Extract all" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("Unknown statement");
+    expect(calls).toEqual(["/api/statements/1/extract", "/api/statements/2/extract"]);
+  });
+
   it("hides the review on Discard without calling the backend", async () => {
     const server = newServer([row(1, "pending_review", account)]);
     render(<StatementsPage />);
