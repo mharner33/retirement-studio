@@ -26,6 +26,15 @@ def load_household(conn: sqlite3.Connection) -> Household | None:
     return Household.model_validate_json(row[0]) if row else None
 
 
+def save_household(conn: sqlite3.Connection, household: Household) -> None:
+    conn.execute(
+        "INSERT INTO profile (id, body) VALUES (1, ?) "
+        "ON CONFLICT(id) DO UPDATE SET body = excluded.body",
+        (household.model_dump_json(by_alias=True),),
+    )
+    conn.commit()
+
+
 @router.get("")
 def get_profile(conn: Conn) -> Household:
     household = load_household(conn)
@@ -47,10 +56,5 @@ def put_profile(household: Household, conn: Conn) -> Household:
             }
         ]
         raise HTTPException(422, detail) from e
-    conn.execute(
-        "INSERT INTO profile (id, body) VALUES (1, ?) "
-        "ON CONFLICT(id) DO UPDATE SET body = excluded.body",
-        (household.model_dump_json(by_alias=True),),
-    )
-    conn.commit()
+    save_household(conn, household)
     return household
