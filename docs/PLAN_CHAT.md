@@ -259,7 +259,7 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - [x] Commit `docs: chat agent status`.
 
 **Phase 5 success criteria**
-- [ ] `npm run check` passes.
+- [x] `npm run check` passes.
 - [x] Container: the image builds, `/api/health` is ok, Chat loads, the conversation survives a restart, and a turn interrupted by `container:down` shows "This reply did not finish. Ask again." after `container:up`. (same scratch container)
 - [x] Live run by hand with `.env` (the only step that calls a real model), the owner's three questions in one conversation: (run on a scratch data folder with the sample household; the card came on a follow-up request, see `docs/STATUS.md`)
   - "What if I retire at 65 instead of 63?": the reply compares both plans with figures that match the Plan page for each, cites the plan engine and offers a retirement age card. Apply it, and the Plan page reflects 65. (Then set it back in the form.)
