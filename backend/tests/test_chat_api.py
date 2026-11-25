@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from backend import db, settings
 from backend.chat import api as chat_api
 from backend.main import create_app
+from backend.profile.models import OneTime
 from backend.tests.conftest import build_sample_household
 
 
@@ -123,6 +124,22 @@ def test_check_changes(client: TestClient) -> None:
     bad = client.post("/api/chat/changes/check", json=proposal("self.bogus")["changes"])
     assert bad.status_code == 422
     assert "cannot be changed" in bad.json()["detail"]
+
+
+def test_check_masks_labels_from_the_saved_profile(client: TestClient) -> None:
+    household = build_sample_household()
+    household.mask_terms = ["Acme"]
+    household.spending.one_time = [
+        OneTime(year=2030, amount=5_000, label="Alex trip with Acme")
+    ]
+    client.put("/api/profile", json=household.model_dump(mode="json", by_alias=True))
+    res = client.post(
+        "/api/chat/changes/check", json=[{"op": "remove_one_time", "index": 0}]
+    )
+    assert res.status_code == 200
+    assert "Alex" not in res.text
+    assert "Acme" not in res.text
+    assert "[YOU]" in res.text
 
 
 def test_apply_keeps_other_profile_edits(client: TestClient, calls) -> None:

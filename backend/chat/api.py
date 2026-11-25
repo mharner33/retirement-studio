@@ -101,10 +101,14 @@ def proposed_change(conn: sqlite3.Connection, change_id: int) -> tuple:
 
 @router.post("/changes/check")
 def check_changes(changes: list[ProfileChange], conn: Conn) -> list[ChangeLine]:
+    household = require_profile(conn)
     try:
-        return describe(require_profile(conn), changes)
+        lines = describe(household, changes)
     except ChangeError as e:
         raise HTTPException(422, str(e)) from e
+    for line in lines:
+        line.label = mask_for_model(line.label, household)
+    return lines
 
 
 @router.post("/changes/{change_id}/apply")
