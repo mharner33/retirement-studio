@@ -103,3 +103,18 @@ export interface PlanResult {
   baseline: PlanOption;
   best_rows: YearRow[];
 }
+
+export interface RuleChange {
+  path: string;
+  old: string;
+  new: string;
+}
+
+export interface RulesStatus {
+  current_file: string;
+  current_date: string | null;
+  age_days: number | null;
+  stale: boolean;
+  pending_file: string | null;
+  changes: RuleChange[];
+}

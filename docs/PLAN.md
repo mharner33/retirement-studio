@@ -345,14 +345,14 @@ Yearly order (fixed here because the tests do not decide it): (1) wages and 401(
 
 **Interfaces — Produces:** The page shows the current rules date and age in days, the source list, a "Refresh rules" button (`POST /api/rules/refresh`, then shows "Research started. Check back in a few minutes."), and the pending review: a table of path, old value and new value, with "Accept" and "Keep current" buttons. A stale banner, "Rules are out of date", appears here and on the Plan page.
 
-- [ ] Tests: the stale banner shows when `stale`; Accept posts to the accept route and refreshes status; no pending section appears without a pending file. In e2e, `POST /api/rules` a modified seed through the API, open Rules, see the change row, Accept, and the current date updates.
-- [ ] Commit `feat: rules review page`.
+- [x] Tests: the stale banner shows when `stale`; Accept posts to the accept route and refreshes status; no pending section appears without a pending file. In e2e, `POST /api/rules` a modified seed through the API, open Rules, see the change row, Accept, and the current date updates.
+- [x] Commit `feat: rules review page`.
 
 **Phase 5 success criteria**
-- [ ] `npm run check` passes.
-- [ ] `curl -X POST localhost:8000/api/rules -d '{"markdown":"no json"}'` → 422, and `GET /api/rules/status` still shows the seed.
-- [ ] Live run, the only step that calls a real model, done by hand with `.env` set: `uv run python -c "from agent.rules_research import refresh; print(refresh())"` creates a pending file in `data/rules/` whose JSON validates, and the Rules page lists its changes. Record the outcome and cost in `docs/STATUS.md`.
-- [ ] Playwright MCP: the review flow from the e2e test works in both themes.
+- [x] `npm run check` passes.
+- [x] `curl -X POST localhost:8000/api/rules -d '{"markdown":"no json"}'` → 422, and `GET /api/rules/status` still shows the seed.
+- [x] Live run, the only step that calls a real model, done by hand with `.env` set: `uv run python -c "from agent.rules_research import refresh; print(refresh())"` creates a pending file in `data/rules/` whose JSON validates, and the Rules page lists its changes. Record the outcome and cost in `docs/STATUS.md`.
+- [x] Playwright MCP: the review flow from the e2e test works in both themes.
 
 ---
 

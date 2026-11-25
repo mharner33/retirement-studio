@@ -7,18 +7,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { formatUsd } from "../format";
+import { formatCompact, formatUsd } from "../format";
 import type { YearRow } from "../types";
 import { KIND_LABELS, sum } from "./kinds";
 
 const KINDS = ["pretax", "roth", "taxable", "cash", "hsa"] as const;
-
-function compact(n: number): string {
-  if (n === 0) {
-    return "$0";
-  }
-  return n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${String(Math.round(n / 1000))}K`;
-}
 
 export function BalanceChart({ rows }: Readonly<{ rows: YearRow[] }>) {
   const kinds = KINDS.filter((k) => rows.some((r) => (r.balances[k] ?? 0) > 0));
@@ -54,7 +47,7 @@ export function BalanceChart({ rows }: Readonly<{ rows: YearRow[] }>) {
               stroke="var(--text-secondary)"
               tickLine={false}
               axisLine={false}
-              tickFormatter={compact}
+              tickFormatter={formatCompact}
               width={64}
             />
             <Tooltip

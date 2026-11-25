@@ -2,14 +2,16 @@ import { useEffect, useState } from "react";
 import { getJson } from "./api";
 import { PlanPage } from "./pages/PlanPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { RulesPage } from "./pages/RulesPage";
 import { applyTheme, initialTheme, type Theme } from "./theme";
 
-type Page = "status" | "profile" | "plan";
+type Page = "status" | "profile" | "plan" | "rules";
 
 const PAGES: { id: Page; label: string }[] = [
   { id: "status", label: "Status" },
   { id: "profile", label: "Profile" },
   { id: "plan", label: "Plan" },
+  { id: "rules", label: "Rules" },
 ];
 type Health = "checking" | "up" | "down";
 
@@ -83,6 +85,7 @@ export function App() {
         )}
         {page === "profile" && <ProfilePage />}
         {page === "plan" && <PlanPage />}
+        {page === "rules" && <RulesPage />}
       </main>
     </div>
   );

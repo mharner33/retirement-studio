@@ -5,5 +5,17 @@ export function formatUsd(n: number): string {
 }
 
 export function formatPercent(rate: number): string {
-  return `${(rate * 100).toFixed(1)}%`;
+  return `${(Math.floor(rate * 1000 + 1e-9) / 10).toFixed(1)}%`;
+}
+
+export function formatCompact(n: number): string {
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(n);
+  const thousands = Math.round(abs / 1000);
+  if (thousands === 0) {
+    return "$0";
+  }
+  return thousands >= 1000
+    ? `${sign}$${(abs / 1_000_000).toFixed(1)}M`
+    : `${sign}$${String(thousands)}K`;
 }

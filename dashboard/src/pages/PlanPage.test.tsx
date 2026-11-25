@@ -97,8 +97,8 @@ describe("PlanPage", () => {
     ).toBeTruthy();
     expect(within(head).getByText("$250,000.00")).toBeTruthy();
     expect(within(head).getByText("$1,162,337.62")).toBeTruthy();
-    expect(within(head).getByText(/You can safely spend \$33,900\.00 more per year/)).toBeTruthy();
-    expect(within(head).getByText("Works in 99.6% of market paths")).toBeTruthy();
+    expect(head.textContent).toContain("You can safely spend $33,900.00 more per year.");
+    expect(head.textContent).toContain("Works in 99.6% of market paths");
   });
 
   it("compares strategies with both measures and explains the baseline", async () => {
@@ -150,6 +150,36 @@ describe("PlanPage", () => {
     );
     render(<PlanPage />);
     expect(await screen.findByText("Rules are out of date")).toBeTruthy();
+  });
+
+  it("hides the stale notice when the rules are current", async () => {
+    stub(
+      () => json(plan),
+      () => json(profile(false)),
+    );
+    render(<PlanPage />);
+    await screen.findByRole("region", { name: "Best plan" });
+    expect(screen.queryByText("Rules are out of date")).toBeNull();
+  });
+
+  it("aborts the plan request when it unmounts", () => {
+    const fetchMock = vi.fn(() => new Promise<Response>(() => undefined));
+    vi.stubGlobal("fetch", fetchMock);
+    const { unmount } = render(<PlanPage />);
+    const init = (fetchMock.mock.calls as unknown as [string, RequestInit][])[0]?.[1];
+    expect(init?.signal?.aborted).toBe(false);
+    unmount();
+    expect(init?.signal?.aborted).toBe(true);
+  });
+
+  it("shows the headline figures in the number font", async () => {
+    stub(
+      () => json(plan),
+      () => json(profile(false)),
+    );
+    render(<PlanPage />);
+    const head = await screen.findByRole("region", { name: "Best plan" });
+    expect(head.querySelectorAll("p .num")).toHaveLength(2);
   });
 
   it("asks for a profile on 409", async () => {

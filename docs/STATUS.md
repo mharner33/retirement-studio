@@ -1,6 +1,6 @@
 # Status
 
-Phases 1 (skeleton), 2 (household profile), 3 (rules file and projection engine) and 4 (strategy search and Plan page) are complete, with one Phase 3 criterion open (see below). The profile can be entered, saved and reloaded. `GET /api/plan` ranks strategies, and the Plan page shows the best one, a comparison table, a balance chart and the year-by-year table.
+Phases 1 (skeleton), 2 (household profile), 3 (rules file and projection engine), 4 (strategy search and Plan page) and 5 (rules research agent and Rules page) are complete, with one Phase 3 criterion open (see below). The profile can be entered, saved and reloaded. `GET /api/plan` ranks strategies, and the Plan page shows the best one, a comparison table, a balance chart and the year-by-year table.
 
 ## What exists
 
@@ -42,6 +42,17 @@ Phases 1 (skeleton), 2 (household profile), 3 (rules file and projection engine)
 - Sample profile saved, `time curl -s localhost:8000/api/plan` took 6.3 s. It returns 5 `top` entries, every `success_rate` is within 0 to 1, every `safe_extra` is at least 0 and the top `after_tax_end` ($1,162,337.62) is above the baseline's ($1,130,107.82). Two calls returned byte-identical JSON.
 - The Plan page was screenshotted in light and dark themes: headline, comparison table, chart and 22-row year table all render, with no exclamation marks.
 
+- `backend/rules/api.py`: `GET /api/rules/status`, `GET /api/rules/{filename}`, `POST /api/rules` (422 on an invalid file), `POST /api/rules/{filename}/accept` (404, 409, 422) and `POST /api/rules/refresh` (202). Refreshed rules stay pending until accepted.
+- `agent/rules_research.py`: the research agent. It fetches only the listed official pages and saves a pending rules file through the API.
+- `dashboard/src/pages/RulesPage.tsx`: shows the rules date and age, the source URLs of the current file, a "Refresh rules" button and the pending review (path, current and new values, "Accept" and "Keep current"). Sections of the pending file marked "Not refreshed on" are listed under the table. Accept errors show the backend message. "Keep current" only hides the review for this visit, since there is no reject route; the file stays pending. The sidebar has Rules.
+- Task 4.2 review fixes: the plan request is aborted on unmount, the headline figures use the number font, `formatPercent` floors to one decimal (only a true 1.0 shows 100.0%), and `formatCompact` handles values just under $1M and negatives.
+
+## Phase 5 checks
+
+- `POST /api/rules` with `{"markdown":"no json"}` returned 422 (`expected one json block, found 0`) on a backend started with a temp `DATA_DIR`, and `GET /api/rules/status` still showed the seed (`retirement_rules_2026-01-01.md`, no pending file).
+- Live run (done by the controller with a real model): the research agent produced the pending file `retirement_rules_2026-11-24.md` in `data/rules/`, and its JSON validates. It has 3 changes, all source URLs, and the figures are unchanged. Its Colorado section reads "Not refreshed on 2026-11-24: source unavailable." because tax.colorado.gov returns 403. Model cost was not recorded. The file is not accepted and is left for the owner to review; the Rules page shows "Not refreshed: Colorado (source unavailable)" for it.
+- The review flow (modified seed posted through the API, change row, Accept, date updates) passes in Playwright and was screenshotted in light and dark themes with no exclamation marks.
+
 ## Next
 
-Phase 5: IRS rules research agent and the Rules page (see `docs/PLAN.md`).
+Phase 6: statement extraction and container release (see `docs/PLAN.md`).

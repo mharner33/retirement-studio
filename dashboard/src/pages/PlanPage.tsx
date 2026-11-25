@@ -12,9 +12,9 @@ type State =
   | { kind: "failed" }
   | { kind: "ready"; plan: PlanResult; profile: Household | null };
 
-async function loadProfile(): Promise<Household | null> {
+async function loadProfile(signal: AbortSignal): Promise<Household | null> {
   try {
-    return await getJson<Household>("/api/profile");
+    return await getJson<Household>("/api/profile", signal);
   } catch {
     return null;
   }
@@ -24,14 +24,23 @@ export function PlanPage() {
   const [state, setState] = useState<State>({ kind: "loading" });
 
   useEffect(() => {
-    Promise.all([getJson<PlanResult>("/api/plan"), loadProfile()]).then(
+    const controller = new AbortController();
+    const { signal } = controller;
+    Promise.all([getJson<PlanResult>("/api/plan", signal), loadProfile(signal)]).then(
       ([plan, profile]) => {
         setState({ kind: "ready", plan, profile });
       },
       (err: unknown) => {
-        setState({ kind: err instanceof ApiError && err.status === 409 ? "no-profile" : "failed" });
+        if (!signal.aborted) {
+          setState({
+            kind: err instanceof ApiError && err.status === 409 ? "no-profile" : "failed",
+          });
+        }
       },
     );
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   if (state.kind === "loading") {
@@ -94,8 +103,13 @@ export function PlanPage() {
               <dd className="num">{formatUsd(best.after_tax_end)}</dd>
             </div>
           </dl>
-          <p>{`You can safely spend ${formatUsd(best.safe_extra)} more per year.`}</p>
-          <p className="secondary">Works in {formatPercent(best.success_rate)} of market paths</p>
+          <p>
+            You can safely spend <span className="num">{formatUsd(best.safe_extra)}</span> more per
+            year.
+          </p>
+          <p className="secondary">
+            Works in <span className="num">{formatPercent(best.success_rate)}</span> of market paths
+          </p>
         </section>
       )}
       <StrategyTable top={plan.top} baseline={plan.baseline} heirRate={heirRate} />
