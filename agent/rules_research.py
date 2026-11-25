@@ -2,15 +2,17 @@ from contextlib import ExitStack
 from datetime import date
 
 import httpx
-import pymupdf
-from bs4 import BeautifulSoup
 from langchain.agents import create_agent
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 from langchain_core.tools import BaseTool, tool
 
+from agent import pages
 from agent.backend_client import make_client
 from agent.model import make_model
+from agent.pages import fetch_text, make_web_client
+
+MAX_PAGE_CHARS = pages.MAX_PAGE_CHARS
 
 SOURCES = [
     "https://www.irs.gov/newsroom/irs-releases-tax-inflation-adjustments-for-tax-year-2026-including-amendments-from-the-one-big-beautiful-bill",
@@ -27,12 +29,6 @@ SOURCES = [
     "https://tax.colorado.gov/sites/default/files/documents/DR_0104EP_2026.pdf",
     "https://tax.colorado.gov/income-tax-topics-social-security-pensions-and-annuities",
 ]
-
-MAX_PAGE_CHARS = 40_000
-USER_AGENT = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-)
 
 SYSTEM_PROMPT = """You maintain the retirement tax rules file for Retirement Studio.
 Today's date is {today}.
@@ -69,16 +65,6 @@ the current value and say so in the text. When finished, reply with the file nam
 returned by save_rules."""
 
 
-def _page_text(url: str, response: httpx.Response) -> str:
-    content_type = response.headers.get("content-type", "")
-    if url.endswith(".pdf") or "application/pdf" in content_type:
-        with pymupdf.open(stream=response.content, filetype="pdf") as doc:
-            if not doc.is_pdf:
-                raise pymupdf.FileDataError("body is not a PDF")
-            return " ".join(str(page.get_text()) for page in doc)
-    return BeautifulSoup(response.text, "html.parser").get_text(" ", strip=True)
-
-
 def _make_tools(client: httpx.Client, web: httpx.Client) -> list[BaseTool]:
     @tool
     def fetch_page(url: str, find: str = "") -> str:
@@ -86,24 +72,7 @@ def _make_tools(client: httpx.Client, web: httpx.Client) -> list[BaseTool]:
 
         Output is cut at 40,000 characters. For long documents pass `find`, a
         keyword, to start the text just before its first occurrence."""
-        if url not in SOURCES:
-            return f"Rejected: {url} is not in the allowed sources."
-        try:
-            response = web.get(url, follow_redirects=True)
-            response.raise_for_status()
-        except httpx.HTTPError as exc:
-            return f"Error fetching {url}: {exc}"
-        try:
-            text = _page_text(url, response)
-        except pymupdf.FileDataError as exc:
-            return f"Error reading {url}: {exc}"
-        index = text.find(find) if find else 0
-        note = ""
-        if index < 0:
-            note = f"'{find}' not found; showing the start of the document.\n"
-            index = 0
-        start = max(index - 200, 0)
-        return note + text[start : start + MAX_PAGE_CHARS]
+        return fetch_text(web, url, SOURCES, find)
 
     @tool
     def current_rules() -> str:
@@ -136,9 +105,7 @@ def refresh(
         if client is None:
             client = stack.enter_context(make_client())
         if web is None:
-            web = stack.enter_context(
-                httpx.Client(timeout=30, headers={"User-Agent": USER_AGENT})
-            )
+            web = stack.enter_context(make_web_client())
         return _run(client, web, model)
 
 
