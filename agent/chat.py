@@ -11,7 +11,7 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.tools import BaseTool, tool
-from pydantic import TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter
 
 from agent.backend_client import make_client
 from agent.model import make_model
@@ -19,7 +19,8 @@ from agent.numbers import unchecked_figures
 from agent.pages import fetch_text, make_web_client
 from backend.chat.benchmark import Benchmark
 from backend.chat.models import ContextMessage, Proposal, Reply, Source
-from backend.engine.projection import Projection, Strategy, YearRow
+from backend.engine.accounts import WithdrawalOrder
+from backend.engine.projection import ConversionTarget, Projection, Strategy, YearRow
 from backend.plan.changes import FIELDS, ChangeLine, ProfileChange, SetField
 from backend.plan.models import PlanOption, PlanResult, WhatIfResult
 
@@ -32,6 +33,8 @@ SOURCES = [
     "https://www.healthfirstcolorado.gov/apply-now/do-you-qualify/",
     "https://www.bls.gov/cex/tables/calendar-year/mean-item-share-average-standard-error.htm",
 ]
+
+MEDICAID_PAGES = [SOURCES[4], SOURCES[5]]
 
 PLAN_ENGINE = Source(kind="engine", label="Plan engine")
 
@@ -52,8 +55,9 @@ Rules:
 - Call propose_change only after a run_whatif result supports the change.
 - Changes to the spouse, accounts or balances cannot be proposed; point the
   owner to the Profile or Statements page for those.
-- Medicaid asset limits come only from the official pages; say that they are
-  far below this household's savings if the page supports it.
+- State no Medicaid figure. Say that the Medicaid asset limit could not be
+  retrieved from an official page, and give these pages as where to check:
+  {medicaid}
 - When you use spending_benchmark, say that the BLS figures cover all consumer
   units of that age or income, not only couples.
 - fetch_page accepts only these URLs. If they do not answer the question, say so:
@@ -68,6 +72,23 @@ RETRY = (
     "These figures are not in any tool result: {figures}. Rewrite your answer "
     "using only figures copied exactly from tool results."
 )
+
+
+class StrategyArgs(BaseModel):
+    """Flat strategy arguments: a tuple would give the tool schema an array
+    without `items`, which OpenAI-compatible providers reject."""
+
+    conversion_target: ConversionTarget = Field(
+        description="Roth conversion bracket to fill between the two ages"
+    )
+    convert_from_age: int = Field(description="Age of [YOU] when conversions start")
+    convert_to_age: int = Field(description="Age of [YOU] when conversions stop")
+    withdrawal_order: WithdrawalOrder
+    claim_age_you: int = Field(description="Social Security claim age of [YOU]")
+    claim_age_spouse: int | None = Field(
+        default=None, description="Social Security claim age of [SPOUSE]"
+    )
+
 
 changes_adapter = TypeAdapter(list[ProfileChange])
 lines_adapter = TypeAdapter(list[ChangeLine])
@@ -278,11 +299,18 @@ def _plan_tools(turn: _Turn) -> list[BaseTool]:
         turn.cite(PLAN_ENGINE)
         return _whatif_text(parsed, WhatIfResult.model_validate(response.json()))
 
-    @tool
-    def run_strategy(strategy: Strategy) -> str:
+    @tool(args_schema=StrategyArgs)
+    def run_strategy(**args: object) -> str:
         """Project one strategy on the saved profile and compare it with
         the current best strategy."""
-        parsed = Strategy.model_validate(strategy)
+        a = StrategyArgs.model_validate(args)
+        parsed = Strategy(
+            conversion_target=a.conversion_target,
+            convert_from_age=a.convert_from_age,
+            convert_to_age=a.convert_to_age,
+            withdrawal_order=a.withdrawal_order,
+            claim_ages=(a.claim_age_you, a.claim_age_spouse),
+        )
         response = client.post("/api/plan/project", json=parsed.model_dump(mode="json"))
         if rejected := _rejected(response):
             return rejected
@@ -393,7 +421,9 @@ def _run(client: httpx.Client, web: httpx.Client, model: BaseChatModel | None) -
         HumanMessage(m.text) if m.role == "user" else AIMessage(m.text) for m in context
     ]
     prompt = SYSTEM_PROMPT.format(
-        today=date.today().isoformat(), sources="\n".join(SOURCES)
+        today=date.today().isoformat(),
+        sources="\n".join(SOURCES),
+        medicaid=" and ".join(MEDICAID_PAGES),
     )
     if earlier:
         prompt += "\n\nFigures from earlier answers:\n" + "\n\n".join(earlier)

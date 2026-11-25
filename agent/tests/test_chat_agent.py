@@ -4,6 +4,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage
+from langchain_core.utils.function_calling import convert_to_openai_tool
 
 from agent import chat
 from agent.tests.stub_model import StubModel
@@ -264,13 +265,20 @@ def test_report_step_sets_step(chat_client: TestClient) -> None:
 
 
 def test_lookup_tools_and_sources(chat_client: TestClient) -> None:
-    strategy = STRATEGY.model_dump(mode="json")
+    strategy = {
+        "conversion_target": "22",
+        "convert_from_age": 63,
+        "convert_to_age": 70,
+        "withdrawal_order": "taxable_first",
+        "claim_age_you": 67,
+        "claim_age_spouse": 67,
+    }
     model = _turn(
         chat_client,
         [
             _call("get_rules", {}, "c1"),
             _call("spending_benchmark", {}, "c2"),
-            _call("run_strategy", {"strategy": strategy}, "c3"),
+            _call("run_strategy", strategy, "c3"),
             AIMessage("Done"),
         ],
     )
@@ -279,9 +287,37 @@ def test_lookup_tools_and_sources(chat_client: TestClient) -> None:
     assert "per month" in bench
     assert "not only couples" in bench
     assert "Current best" in strat
+    assert f"This strategy: {STRATEGY.label()}" in strat
     reply = _last(chat_client)
     kinds = [(s["kind"], s["label"]) for s in reply["sources"]]
     assert kinds[0][0] == "rules"
     assert kinds[0][1].startswith("Rules file ")
     assert ("engine", "Plan engine") in kinds
     assert any(s["kind"] == "web" and "bls.gov" in s["url"] for s in reply["sources"])
+
+
+def _arrays_ok(node: object) -> bool:
+    if isinstance(node, dict):
+        if "prefixItems" in node or (
+            node.get("type") == "array" and "items" not in node
+        ):
+            return False
+        return all(_arrays_ok(v) for v in node.values())
+    if isinstance(node, list):
+        return all(_arrays_ok(v) for v in node)
+    return True
+
+
+def test_tool_schemas_have_items_for_arrays() -> None:
+    tools = chat._Turn(cast(httpx.Client, None), _web()).tools()
+    for t in tools:
+        assert _arrays_ok(convert_to_openai_tool(t)), t.name
+
+
+def test_prompt_points_to_medicaid_pages(chat_client: TestClient) -> None:
+    model = _turn(chat_client, [AIMessage("Ok")], text="Medicaid asset limit")
+    prompt = str(model.seen[0][0].content)
+    assert "Medicaid asset limit could not be" in prompt
+    assert "far below" not in prompt
+    assert "https://www.medicaid.gov/medicaid/eligibility/index.html" in prompt
+    assert "https://www.healthfirstcolorado.gov/apply-now/do-you-qualify/" in prompt
