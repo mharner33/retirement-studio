@@ -177,8 +177,8 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - `pages.fetch_text(web: httpx.Client, url: str, allowed: list[str], find: str = "") -> str`: the existing `fetch_page` body from `rules_research.py` (rejection message, PDF text, `find`, 40,000-character cut), with `allowed` as a parameter. `USER_AGENT` and `make_web_client()` move here too.
 - `numbers.unchecked_figures(reply: str, tool_texts: list[str]) -> list[str]`: the dollar tokens (`$` followed by digits with optional commas and cents) and percent tokens (digits with optional decimals followed by `%`) in `reply` that match no number in `tool_texts`. Numbers in tool texts are every `$` token, every `%` token and every bare number. A dollar token matches a tool number equal to it in cents, or equal after rounding to whole dollars when the token has no cents. A percent token `p` matches a tool number `v` when `v` or `v × 100` rounds to `p` at the token's decimal places. Ages, years and other bare numbers in the reply are not checked. Returns tokens as written.
 
-- [ ] Tests: `test_matches_formatted_money` (`"$1,248,000.00"` vs `"1248000.0"` → `[]`); `test_matches_whole_dollars` (`"$86,000"` vs `"85999.6"` → `[]`); `test_flags_invented_money` (`"$86,000.00"` vs `"85000"` → `["$86,000.00"]`); `test_matches_rate_as_percent` (`"6.2%"` vs `"0.062"` → `[]`); `test_ignores_years_and_ages` (`"In 2030 at 67"` → `[]`).
-- [ ] FAIL, implement, PASS; `uv run pytest agent --no-cov` still green. Commit `refactor: shared page fetching; feat: figure check`.
+- [x] Tests: `test_matches_formatted_money` (`"$1,248,000.00"` vs `"1248000.0"` → `[]`); `test_matches_whole_dollars` (`"$86,000"` vs `"85999.6"` → `[]`); `test_flags_invented_money` (`"$86,000.00"` vs `"85000"` → `["$86,000.00"]`); `test_matches_rate_as_percent` (`"6.2%"` vs `"0.062"` → `[]`); `test_ignores_years_and_ages` (`"In 2030 at 67"` → `[]`).
+- [x] FAIL, implement, PASS; `uv run pytest agent --no-cov` still green. Commit `refactor: shared page fetching; feat: figure check`.
 
 ### Task 3.2: Chat agent
 
@@ -203,7 +203,7 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - Flow: `GET /api/chat/context`; build the history (user and assistant messages; earlier turns' tool results go into the system prompt as "Figures from earlier answers"); run the agent; collect this turn's tool message texts; run `unchecked_figures` against this turn's plus the earlier tool results. On a mismatch, invoke once more with the conversation so far plus a message listing the figures that are not in any tool result and asking for a rewrite using only tool figures; check again. `POST /api/chat/reply` with `unchecked` true if the second check still fails.
 - System prompt essentials: answer about this household using tools; state no number that is not in a tool result, and copy figures exactly as tools give them; say which source each answer used; propose a change only after a what-if supports it; for spouse or account changes, point to the Profile or Statements page; Medicaid asset limits from the official page; plain business English, no exclamation marks, not professional advice; refer to people as `[YOU]` and `[SPOUSE]`; call `report_step` before slow tools.
 
-- [ ] Tests (stub model, backend `TestClient` as `client`, `httpx.MockTransport` as `web`; sample profile saved; plan routes monkeypatched to small fixed `PlanResult`s so tests stay fast):
+- [x] Tests (stub model, backend `TestClient` as `client`, `httpx.MockTransport` as `web`; sample profile saved; plan routes monkeypatched to small fixed `PlanResult`s so tests stay fast):
   - `test_whatif_reply_with_proposal` (the stub calls `run_whatif` with retirement age 65, then `propose_change`, then replies with a figure copied from the tool result; `GET /api/chat` shows the reply, source "Plan engine", one proposed card, `unchecked` false).
   - `test_invented_figure_retried_then_flagged` (both replies contain `$12,345.00`; the stub saw a second request naming `$12,345.00`; the stored reply has `unchecked` true).
   - `test_invented_figure_fixed_on_retry` (`unchecked` false).
@@ -211,12 +211,12 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
   - `test_fetch_page_rejects_unlisted_url` and `test_fetch_page_source_recorded`.
   - `test_model_never_sees_first_name` (the user message "Can Alex retire at 65"; no message in `stub.seen` contains "Alex").
   - `test_report_step_sets_step`.
-- [ ] FAIL, implement, PASS. Commit `feat: planning chat agent`.
+- [x] FAIL, implement, PASS. Commit `feat: planning chat agent`.
 
 **Phase 3 success criteria**
-- [ ] `npm run check` passes.
-- [ ] `uv run pytest agent --no-cov -q` passes, including the rules research tests after the `pages.py` move.
-- [ ] `test_whatif_reply_with_proposal` drives the full turn through the real backend routes (`POST /api/chat/messages` → `respond` → `GET /api/chat` shows the reply and status `idle`).
+- [x] `npm run check` passes.
+- [x] `uv run pytest agent --no-cov -q` passes, including the rules research tests after the `pages.py` move.
+- [x] `test_whatif_reply_with_proposal` drives the full turn through the real backend routes (`POST /api/chat/messages` → `respond` → `GET /api/chat` shows the reply and status `idle`).
 
 ---
 
