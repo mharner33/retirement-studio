@@ -1,0 +1,24 @@
+{
+  "source_url": "https://www.bls.gov/cex/tables/calendar-year/mean-item-share-average-standard-error.htm",
+  "table_year": 2025,
+  "age_groups": [
+    {"label": "Under 25", "min_age": 0, "max_age": 24, "annual_spending": 54136},
+    {"label": "25-34", "min_age": 25, "max_age": 34, "annual_spending": 78579},
+    {"label": "35-44", "min_age": 35, "max_age": 44, "annual_spending": 93650},
+    {"label": "45-54", "min_age": 45, "max_age": 54, "annual_spending": 106658},
+    {"label": "55-64", "min_age": 55, "max_age": 64, "annual_spending": 85442},
+    {"label": "65-74", "min_age": 65, "max_age": 74, "annual_spending": 69333},
+    {"label": "75 and older", "min_age": 75, "max_age": null, "annual_spending": 57959}
+  ],
+  "income_bands": [
+    {"label": "Less than $15,000", "min_income": 0, "max_income": 15000, "annual_spending": 36748},
+    {"label": "$15,000 to $29,999", "min_income": 15000, "max_income": 30000, "annual_spending": 37777},
+    {"label": "$30,000 to $39,999", "min_income": 30000, "max_income": 40000, "annual_spending": 42380},
+    {"label": "$40,000 to $49,999", "min_income": 40000, "max_income": 50000, "annual_spending": 52025},
+    {"label": "$50,000 to $69,999", "min_income": 50000, "max_income": 70000, "annual_spending": 60590},
+    {"label": "$70,000 to $99,999", "min_income": 70000, "max_income": 100000, "annual_spending": 70971},
+    {"label": "$100,000 to $149,999", "min_income": 100000, "max_income": 150000, "annual_spending": 90874},
+    {"label": "$150,000 to $199,999", "min_income": 150000, "max_income": 200000, "annual_spending": 114235},
+    {"label": "$200,000 and more", "min_income": 200000, "max_income": null, "annual_spending": 179481}
+  ]
+}

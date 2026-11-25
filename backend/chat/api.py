@@ -2,12 +2,15 @@ import importlib
 import logging
 import sqlite3
 from contextlib import closing
+from datetime import date
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response
 from fastapi.responses import PlainTextResponse
 
 from backend import db, settings
 from backend.chat import store
+from backend.chat.benchmark import Benchmark
+from backend.chat.benchmark import benchmark as spending_benchmark
 from backend.chat.masking import mask_for_model, unmask
 from backend.chat.models import (
     ChangeCard,
@@ -17,6 +20,7 @@ from backend.chat.models import (
     Step,
     UserMessage,
 )
+from backend.plan.api import _context, plan_for
 from backend.plan.changes import (
     ChangeError,
     ChangeLine,
@@ -174,3 +178,10 @@ def post_reply(reply: Reply, conn: Conn) -> dict[str, str]:
         store.add_change(conn, message_id, proposal, lines)
     store.set_turn(conn, "idle")
     return {"status": "stored"}
+
+
+@router.get("/benchmark")
+def get_benchmark(conn: Conn, request: Request) -> Benchmark:
+    household, rules, filename, stale = _context(conn, request)
+    plan = plan_for(household, rules, filename, date.today().year, stale)
+    return spending_benchmark(household, plan)
