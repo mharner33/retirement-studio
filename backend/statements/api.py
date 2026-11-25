@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
+import pymupdf
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, UploadFile
 from fastapi.responses import PlainTextResponse
 from pydantic import TypeAdapter
@@ -65,7 +66,13 @@ def save_one(
     filename = Path((upload.filename or "").replace("\\", "/")).name
     result = UploadResult(filename=filename)
     content = upload.file.read(MAX_BYTES + 1)
-    if not filename.lower().endswith(".pdf") or not content.startswith(b"%PDF"):
+    stem = filename[:-4]
+    if (
+        not filename.lower().endswith(".pdf")
+        or not stem
+        or stem.startswith(".")
+        or not content.startswith(b"%PDF")
+    ):
         result.error = "Only PDF files are accepted"
     elif len(content) > MAX_BYTES:
         result.error = "File is larger than 20 MB"
@@ -144,7 +151,10 @@ def list_statements(conn: Conn) -> list[StatementRow]:
 @router.get("/{statement_id}/text")
 def get_text(statement_id: int, conn: Conn, request: Request) -> PlainTextResponse:
     row = get_row(conn, statement_id)
-    text = pdf.extract_text(statements_dir(request) / row[1])
+    try:
+        text = pdf.extract_text(statements_dir(request) / row[1])
+    except (pymupdf.FileDataError, pymupdf.FileNotFoundError) as e:
+        raise HTTPException(422, "Could not read this PDF") from e
     if not text.strip():
         set_status(conn, statement_id, "no_text")
         raise HTTPException(422, "No text found in this PDF")
@@ -181,8 +191,8 @@ def apply_accounts(household: Household, document: ExtractedStatement) -> None:
             (
                 a
                 for a in household.accounts
-                if item.last4
-                and (a.kind, a.owner, a.last4) == (item.kind, item.owner, item.last4)
+                if (a.kind, a.owner, a.last4) == (item.kind, item.owner, item.last4)
+                and (item.last4 or a.label == item.label)
             ),
             None,
         )
@@ -192,10 +202,14 @@ def apply_accounts(household: Household, document: ExtractedStatement) -> None:
                 match.cost_basis = item.cost_basis
             match.as_of = document.statement_date
         else:
+            base = f"{item.kind}-{item.owner}-"
+            taken = {a.id for a in household.accounts}
             suffix = item.last4 or len(household.accounts) + 1
+            while f"{base}{suffix}" in taken:
+                suffix = int(suffix) + 1
             household.accounts.append(
                 Account(
-                    id=f"{item.kind}-{item.owner}-{suffix}",
+                    id=f"{base}{suffix}",
                     kind=item.kind,
                     owner=item.owner,
                     label=item.label,
@@ -225,7 +239,8 @@ def body_error(field: str, msg: str) -> HTTPException:
 
 @router.post("/{statement_id}/accept")
 def accept(statement_id: int, document: ExtractedDocument, conn: Conn) -> StatementRow:
-    get_row(conn, statement_id)
+    if get_row(conn, statement_id)[2] == "accepted":
+        raise HTTPException(409, "Already accepted")
     household = load_household(conn)
     if household is None:
         raise HTTPException(409, "Complete your profile first")

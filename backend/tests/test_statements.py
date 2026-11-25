@@ -320,3 +320,113 @@ def test_scan_reports_pdf_name_without_magic_bytes(
     assert results == [
         {"filename": "fake.pdf", "id": None, "error": "Only PDF files are accepted"}
     ]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Ending balance 125000.00",
+        "Value 1234567.89",
+        "Shares 123456.789",
+        "Total 250,000.00",
+        "Market Value 125,000.00 1234567.89",
+        "2026 100000.00 200000.00",
+    ],
+)
+def test_mask_keeps_balances_without_separators(text: str) -> None:
+    assert pdf.mask(text, []) == text
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("SSN 123–45–6789", "SSN ****6789"),
+        ("SSN 123—45—6789", "SSN ****6789"),
+        ("Acct 1234 5678 9012", "Acct ****9012"),
+        ("Acct 1234  5678  9012", "Acct ****9012"),
+        ("Acct 1234·5678·9012", "Acct ****9012"),
+        ("Acct 123456789", "Acct ****6789"),
+        ("Acct 1234 5678 9012 3456", "Acct ****3456"),
+        ("Routing 021000021", "Routing ****0021"),
+    ],
+)
+def test_mask_catches_separator_variants(text: str, expected: str) -> None:
+    assert pdf.mask(text, []) == expected
+
+
+def test_mask_terms_span_whitespace_and_respect_word_edges() -> None:
+    out = pdf.mask("Alex\n  Smith and Alexander", ["Alex Smith", "Alex"])
+    assert out == "[MASKED] and Alexander"
+
+
+def test_mask_through_real_pdf_pipeline(tmp_path: Path) -> None:
+    path = tmp_path / "s.pdf"
+    path.write_bytes(make_pdf("SSN 123–45–6789\nAcct 1234 5678 9012\nAlex\nSmith"))
+    out = pdf.mask(pdf.extract_text(path), ["Alex Smith"])
+    assert "6789" in out
+    assert "123" not in out
+    assert "5678" not in out
+    assert "Smith" not in out
+
+
+def test_accept_twice_is_409_and_does_not_duplicate(client: TestClient) -> None:
+    put_profile(client)
+    sid = new_statement(client)
+    doc = account_doc(last4=None)
+    assert client.post(f"/api/statements/{sid}/accept", json=doc).status_code == 200
+    res = client.post(f"/api/statements/{sid}/accept", json=doc)
+    assert res.status_code == 409
+    assert res.json()["detail"] == "Already accepted"
+    assert len(client.get("/api/profile").json()["accounts"]) == 5
+
+
+def test_accept_matches_last4_less_account_by_label(client: TestClient) -> None:
+    put_profile(client)
+    first = new_statement(client, "a.pdf")
+    second = new_statement(client, "b.pdf")
+    client.post(f"/api/statements/{first}/accept", json=account_doc(last4=None))
+    doc = account_doc(last4=None, balance=1_000)
+    client.post(f"/api/statements/{second}/accept", json=doc)
+    accounts = client.get("/api/profile").json()["accounts"]
+    assert len(accounts) == 5
+    assert accounts[-1]["balance"] == 1_000
+
+
+def test_new_account_id_is_never_reused(client: TestClient) -> None:
+    put_profile(client)
+    first = new_statement(client, "a.pdf")
+    second = new_statement(client, "b.pdf")
+    client.post(f"/api/statements/{first}/accept", json=account_doc(last4=None))
+    other = account_doc(last4=None, label="Other 401(k)")
+    client.post(f"/api/statements/{second}/accept", json=other)
+    ids = [a["id"] for a in client.get("/api/profile").json()["accounts"]]
+    assert len(ids) == len(set(ids)) == 6
+
+
+def test_text_of_corrupt_or_missing_pdf_is_422(
+    client: TestClient, tmp_path: Path
+) -> None:
+    first = new_statement(client, "a.pdf")
+    second = new_statement(client, "b.pdf")
+    (tmp_path / "statements" / "a.pdf").write_bytes(b"%PDF-1.4 garbage")
+    (tmp_path / "statements" / "b.pdf").unlink()
+    for sid in (first, second):
+        res = client.get(f"/api/statements/{sid}/text")
+        assert res.status_code == 422
+        assert res.json()["detail"] == "Could not read this PDF"
+
+
+@pytest.mark.parametrize("name", [".pdf", "..pdf", ".hidden.pdf"])
+def test_upload_rejects_empty_or_hidden_stem(client: TestClient, name: str) -> None:
+    assert upload(client, (name, make_pdf())).json()[0]["id"] is None
+
+
+def test_extraction_rejects_full_account_number_and_negative_amounts(
+    client: TestClient,
+) -> None:
+    sid = new_statement(client)
+    url = f"/api/statements/{sid}/extraction"
+    assert client.put(url, json=account_doc(last4="123456789")).status_code == 422
+    assert client.put(url, json=account_doc(cost_basis=-1)).status_code == 422
+    bad_ss = ss_doc("self") | {"monthly_at_70": -1}
+    assert client.put(url, json=bad_ss).status_code == 422

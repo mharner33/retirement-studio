@@ -3,10 +3,16 @@ from pathlib import Path
 
 import pymupdf
 
-# An ISO date matches first so it is left alone; other runs of 6+ digits
-# (spaces and dashes allowed inside) are account or tax numbers. Amounts with
-# commas never form such a run, and a leading $ is skipped.
-NUMBER = re.compile(r"\d{4}-\d{2}-\d{2}(?!\d)|(?<![\d$])\d(?:[ -]?\d){5,}")
+# Dashes (including unicode ones), NBSP, middle dot and short runs of spaces
+# separate digit groups. An ISO date is matched first so it is left alone. A
+# candidate is never started inside a number nor ended before more digits, a
+# comma or a decimal fraction, so balances like 125000.00 survive.
+MIN_DIGITS = 6
+SEP = r"[ \t\u00a0\u2010-\u2015\u00b7-]{1,3}"
+NUMBER = re.compile(
+    r"(?<![\d.,$])(?:\d{4}-\d{2}-\d{2}(?!\d)"
+    rf"|(?:\d{{6,}}|\d{{2,4}}(?:{SEP}\d{{2,4}})+)(?![\d,]|\.\d))"
+)
 
 
 def extract_text(path: Path) -> str:
@@ -15,14 +21,17 @@ def extract_text(path: Path) -> str:
 
 
 def _mask_number(match: re.Match[str]) -> str:
-    digits = re.sub(r"\D", "", match.group())
-    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", match.group()):
-        return match.group()
-    return "****" + digits[-4:]
+    text = match.group()
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        return text
+    digits = re.sub(r"\D", "", text)
+    return "****" + digits[-4:] if len(digits) >= MIN_DIGITS else text
 
 
 def mask(text: str, terms: list[str]) -> str:
     for term in terms:
-        if term:
-            text = re.sub(re.escape(term), "[MASKED]", text, flags=re.IGNORECASE)
+        words = term.split()
+        if words:
+            body = r"\s+".join(map(re.escape, words))
+            text = re.sub(rf"(?<!\w){body}(?!\w)", "[MASKED]", text, flags=re.I)
     return NUMBER.sub(_mask_number, text)

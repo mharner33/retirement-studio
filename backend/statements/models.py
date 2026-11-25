@@ -10,8 +10,8 @@ class ExtractedAccount(BaseModel):
     owner: Literal["self", "spouse"] = "self"
     label: str
     balance: float = Field(ge=0)
-    cost_basis: float | None = None
-    last4: str | None = None
+    cost_basis: float | None = Field(default=None, ge=0)
+    last4: str | None = Field(default=None, pattern=r"^\d{4}$")
 
 
 class ExtractedStatement(BaseModel):
@@ -25,10 +25,10 @@ class ExtractedSsStatement(BaseModel):
     doc_type: Literal["social_security"]
     statement_date: date
     person: Literal["self", "spouse"] | None = None
-    monthly_at_62: float
-    monthly_at_fra: float
+    monthly_at_62: float = Field(ge=0)
+    monthly_at_fra: float = Field(ge=0)
     fra_age: str
-    monthly_at_70: float
+    monthly_at_70: float = Field(ge=0)
 
 
 ExtractedDocument = Annotated[
