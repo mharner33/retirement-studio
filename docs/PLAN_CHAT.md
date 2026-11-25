@@ -231,7 +231,7 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - `ChatPage`: loads `GET /api/chat`; shows messages (owner and "Studio"), each assistant reply with its sources (web sources as links, others as text) and, when `unchecked`, the note "Some figures could not be checked."; a text box with placeholder "Ask about your plan" and "Send" (disabled while `working` or blank); while `working`, the step label (or "Working on it" with no step) and a poll every 2,000 ms that stops when the status leaves `working`; on `failed`, "This reply did not finish. Ask again."; "New conversation" (`DELETE /api/chat`, disabled while working); "Complete your profile first" on 409 from Send or when `GET /api/profile` is 404.
 - `ChangeCard`: one row per line, label, old and new (money with `formatUsd`, rates as percentages, ages as plain numbers, a missing value as "None"), "Apply" and "Dismiss" while `proposed`; "Applied" or "Dismissed" otherwise; an Apply 422 shows the message on the card.
 
-- [ ] Tests:
+- [x] Tests:
   - Renders a conversation with a reply, its sources and a change card from a mocked `ChatState`.
   - Send posts `{"text": ...}`, clears the box, shows the step label and polls until `idle` (fake timers).
   - Send is disabled while `working`.
@@ -240,12 +240,12 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
   - Change card: money line reads `$60,000.00` → `$70,000.00`; Apply posts to the apply route and shows "Applied"; a 422 shows the message.
   - New conversation calls `DELETE /api/chat`.
   - e2e (no model; the Playwright backend runs with `CHAT_AGENT=off`, so `run_chat` returns at once and leaves the turn `working`): save the sample profile, post a message, then `POST /api/chat/reply` through the API with a reply and a proposal for `self.retirement_age` 65. Open Chat, see the reply and the card, Apply, open Profile and see retirement age 65.
-- [ ] `CHAT_AGENT=off` is read in `run_chat` only (documented in `docs/STATUS.md`), so e2e never calls a model.
-- [ ] Commit `feat: chat page with change cards`.
+- [x] `CHAT_AGENT=off` is read in `run_chat` only (documented in `docs/STATUS.md`), so e2e never calls a model.
+- [x] Commit `feat: chat page with change cards`.
 
 **Phase 4 success criteria**
-- [ ] `npm run check` passes.
-- [ ] Playwright screenshots of the Chat page with a reply, a sources line, a change card and the unchecked note, in light and dark themes, colors per `docs/BRAND.md`, money as `$1,250.00`, no exclamation marks.
+- [x] `npm run check` passes.
+- [x] Playwright screenshots of the Chat page with a reply, a sources line, a change card and the unchecked note, in light and dark themes, colors per `docs/BRAND.md`, money as `$1,250.00`, no exclamation marks.
 
 ---
 
