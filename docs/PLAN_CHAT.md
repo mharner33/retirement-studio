@@ -109,8 +109,8 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - `mask_for_model(text: str, h: Household) -> str`: self first name → `[YOU]`, spouse first name → `[SPOUSE]` (whole words, case-insensitive), then `backend.statements.pdf.mask(text, h.mask_terms)` (terms → `[MASKED]`, long digit runs → last 4).
 - `unmask(text: str, h: Household) -> str`: `[YOU]` and `[SPOUSE]` back to the first names. `[MASKED]` stays.
 
-- [ ] Tests: `test_masks_first_names_whole_words` (name "Ann": "Ann's annual budget" → "[YOU]'s annual budget") (Review Focus); `test_masks_terms_and_account_numbers`; `test_unmask_restores_names_only`; `test_spouse_placeholder_unused_without_spouse`.
-- [ ] FAIL, implement, PASS. Commit `feat: chat masking`.
+- [x] Tests: `test_masks_first_names_whole_words` (name "Ann": "Ann's annual budget" → "[YOU]'s annual budget") (Review Focus); `test_masks_terms_and_account_numbers`; `test_unmask_restores_names_only`; `test_spouse_placeholder_unused_without_spouse`.
+- [x] FAIL, implement, PASS. Commit `feat: chat masking`.
 
 ### Task 2.2: Chat store, routes and background turn
 
@@ -134,7 +134,7 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - `create_app` sets a `working` turn to `failed` at startup.
 - `failed` is cleared to `working` by the next message.
 
-- [ ] Tests (monkeypatch `run_chat` where no agent should run):
+- [x] Tests (monkeypatch `run_chat` where no agent should run):
   - `test_post_message_202_and_stores_masked` (sample name "Alex": text "Can Alex retire at 65" is stored as "Can [YOU] retire at 65"; `GET /api/chat` shows "Can Alex retire at 65"; status `working`).
   - `test_post_message_409_while_working` (Review Focus; the background function was called once).
   - `test_post_message_409_without_profile` and `test_blank_message_422`.
@@ -145,7 +145,7 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
   - `test_startup_marks_working_turn_failed` (Review Focus; write `working`, build a new app on the same dir, status `failed`).
   - `test_run_chat_failure_marks_failed` (patch the import to raise).
   - `test_delete_clears_conversation` and `test_delete_409_while_working`.
-- [ ] FAIL, implement, PASS. Commit `feat: chat storage, routes and background turn`.
+- [x] FAIL, implement, PASS. Commit `feat: chat storage, routes and background turn`.
 
 ### Task 2.3: Spending benchmark
 
@@ -157,13 +157,13 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - `benchmark(h: Household, plan: PlanResult) -> Benchmark`: the age group of the older living person today; `planned_annual` is the `spending` of the first row of `plan.best_rows` in which `self` has reached `retirement_age` (the first row if already retired); the income band whose range contains `planned_annual`.
 - `GET /api/chat/benchmark` → `Benchmark` (409 without a profile; uses `plan_for`).
 
-- [ ] Tests: `test_seed_validates` (bands ascending, last `max_income` None, the source URL is on bls.gov); `test_picks_band_for_planned_spending`; `test_already_retired_uses_first_row`; `test_age_group_of_older_person`.
-- [ ] FAIL, implement, PASS. Commit `feat: spending benchmark`.
+- [x] Tests: `test_seed_validates` (bands ascending, last `max_income` None, the source URL is on bls.gov); `test_picks_band_for_planned_spending`; `test_already_retired_uses_first_row`; `test_age_group_of_older_person`.
+- [x] FAIL, implement, PASS. Commit `feat: spending benchmark`.
 
 **Phase 2 success criteria**
-- [ ] `npm run check` passes.
-- [ ] With the sample profile saved and `run_chat` not yet wired to an agent (the import fails and the turn goes `failed`): `curl -X POST localhost:8000/api/chat/messages -H 'content-type: application/json' -d '{"text":"Can Alex retire at 65"}'` → 202; then `GET /api/chat` shows the message with "Alex" and status `failed`; `sqlite3 data/studio.db "select text from chat_messages"` shows "[YOU]".
-- [ ] `GET /api/chat/benchmark` returns an age group, an income band and the BLS URL.
+- [x] `npm run check` passes.
+- [x] With the sample profile saved and `run_chat` not yet wired to an agent (the import fails and the turn goes `failed`): `curl -X POST localhost:8000/api/chat/messages -H 'content-type: application/json' -d '{"text":"Can Alex retire at 65"}'` → 202; then `GET /api/chat` shows the message with "Alex" and status `failed`; `sqlite3 data/studio.db "select text from chat_messages"` shows "[YOU]".
+- [x] `GET /api/chat/benchmark` returns an age group, an income band and the BLS URL.
 
 ---
 

@@ -66,7 +66,8 @@ Phases 1 to 6 (skeleton, household profile, rules file and projection engine, st
 ## Chat agent (in progress, `docs/PLAN_CHAT.md`)
 
 - Phase 1 done: `backend/plan/changes.py` (`ProfileChange` set / add_one_time / remove_one_time, the `FIELDS` map of changeable profile paths, `apply_changes`, `describe`) and `POST /api/plan/whatif` (body: a list of changes applied to the saved profile, which is not saved; returns the current and what-if `PlanResult` plus change lines; 422 on a bad change). `plan_for` caches plan results in memory (8 entries). Checked live: the what-if right after `GET /api/plan` took 6.5 s.
+- Phase 2 done: `backend/chat/` with `masking.py` (`mask_for_model`: first names → `[YOU]`/`[SPOUSE]` as whole words, `mask_terms` → `[MASKED]`, long digit runs → last 4; `unmask` restores the names for display), `store.py`, `api.py` and tables `chat_messages`, `chat_changes`, `chat_turn`. Owner routes: `GET /api/chat`, `POST /api/chat/messages` (202; 409 while a reply is in progress or with no profile), `POST /api/chat/changes/{id}/apply` and `/dismiss`, `DELETE /api/chat`. Agent routes: `GET /api/chat/context` (last 20 messages, masked), `GET /api/chat/profile` (masked), `PUT /api/chat/step`, `POST /api/chat/changes/check`, `POST /api/chat/reply`. A turn still working at startup becomes failed. Text is stored masked. `GET /api/chat/benchmark` picks BLS Consumer Expenditure 2025 averages (Table 1300 by age, Table 1203 by income before taxes, seed `backend/chat/seed/bls_spending.json`) for the older person's age and the planned first-retirement-year spending; the BLS figures cover all consumer units, not only couples.
 
 ## Next
 
-The chat agent: design in `docs/superpowers/specs/2026-11-25-chat-agent-design.md`, plan in `docs/PLAN_CHAT.md`. Phases 2 to 5 remain.
+The chat agent: design in `docs/superpowers/specs/2026-11-25-chat-agent-design.md`, plan in `docs/PLAN_CHAT.md`. Phases 3 to 5 remain.
