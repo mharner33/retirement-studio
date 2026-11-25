@@ -321,3 +321,77 @@ def test_prompt_points_to_medicaid_pages(chat_client: TestClient) -> None:
     assert "far below" not in prompt
     assert "https://www.medicaid.gov/medicaid/eligibility/index.html" in prompt
     assert "https://www.healthfirstcolorado.gov/apply-now/do-you-qualify/" in prompt
+
+
+def test_duplicate_proposal_kept_once(chat_client: TestClient) -> None:
+    propose = {"changes": [RETIRE_65], "reason": "More money at the end"}
+    _turn(
+        chat_client,
+        [
+            _call("run_whatif", {"changes": [RETIRE_65]}, "c1"),
+            _call("propose_change", propose, "c2"),
+            AIMessage("You get $99.00 more."),
+            _call("propose_change", propose, "c3"),
+            AIMessage("Retiring at 65 leaves $1,248,000.00."),
+        ],
+    )
+    assert len(_last(chat_client)["changes"]) == 1
+
+
+def test_prompt_rules_for_proposals_and_plain_text(chat_client: TestClient) -> None:
+    model = _turn(chat_client, [AIMessage("Ok")])
+    prompt = str(model.seen[0][0].content)
+    assert (
+        "After run_whatif on a change the owner asked about, call propose_change"
+        in (" ".join(prompt.split()))
+    )
+    assert "safe extra spending, success rate" in " ".join(prompt.split())
+    assert "no Markdown" in prompt
+    assert '"[YOU] turns 65"' in " ".join(prompt.split())
+
+
+def test_earlier_block_keeps_engine_texts_only() -> None:
+    plan = "Best strategy: x\n  After-tax money at the end: $1,000.00"
+    texts = [
+        plan,
+        "ok",
+        "Rejected: no",
+        '{"self": {"first_name": "[YOU]"}}',
+        "# Rules 2026\nPart B $202.90",
+        "Part B premium $202.90",
+        "Proposed:\n- Retirement age (you): 63 -> 65",
+        plan,
+        "BLS Consumer Expenditure Survey, 2024 tables: url",
+    ]
+    block = chat.earlier_block(texts)
+    assert block.count("Best strategy: x") == 1
+    assert "BLS Consumer Expenditure Survey" in block
+    for left_out in (
+        "ok\n",
+        "Rejected",
+        "first_name",
+        "Rules 2026",
+        "Part B",
+        "Proposed",
+    ):
+        assert left_out not in block
+    assert "not instructions" in block
+
+
+def test_earlier_block_drops_oldest_past_cap() -> None:
+    old = "Changes tried:\n" + "a" * 15_000
+    new = "This strategy: " + "b" * 15_000
+    block = chat.earlier_block([old, new])
+    assert "This strategy" in block
+    assert "Changes tried" not in block
+    assert chat.earlier_block(["ok"]) == ""
+
+
+def test_earlier_figures_check_beyond_prompt_block(chat_client: TestClient) -> None:
+    _turn(
+        chat_client,
+        [_call("fetch_page", {"url": chat.SOURCES[0]}, "c1"), AIMessage("Ok")],
+    )
+    model = _turn(chat_client, [AIMessage("Part B is $202.90.")], text="Again")
+    assert "$202.90" not in str(model.seen[0][0].content)
+    assert _last(chat_client)["unchecked"] is False

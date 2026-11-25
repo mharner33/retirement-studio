@@ -17,6 +17,11 @@ def test_matches_rate_as_percent() -> None:
     assert unchecked_figures("A rate of 6.2%.", ["0.062"]) == []
 
 
+def test_percent_matches_rate_times_100_not_bare_number() -> None:
+    assert unchecked_figures("Growth of 7%.", ["7.0"]) == ["7%"]
+    assert unchecked_figures("Growth of 7%.", ["0.07"]) == []
+
+
 def test_matches_percent_written_as_percent() -> None:
     assert unchecked_figures("Taxed at 22%.", ["bracket 22%"]) == []
     assert unchecked_figures("Taxed at 24%.", ["bracket 22%"]) == ["24%"]

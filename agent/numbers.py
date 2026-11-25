@@ -23,7 +23,8 @@ def _places(token: str) -> int:
 def _tool_figures(
     tool_texts: list[str],
 ) -> tuple[set[Decimal], set[Decimal], set[Decimal]]:
-    """Return dollar-like values, percent-like values and rate-like decimals."""
+    """Return dollar-like values, percent-like values and rates (bare decimals
+    between 0 and 1)."""
     dollars: set[Decimal] = set()
     percents: set[Decimal] = set()
     decimals: set[Decimal] = set()
@@ -37,7 +38,8 @@ def _tool_figures(
                 percents.add(value)
             elif "." in token:
                 dollars.add(value)
-                decimals.add(value)
+                if 0 < value < 1:
+                    decimals.add(value)
             elif value >= _MIN_BARE_DOLLARS:
                 dollars.add(value)
     return dollars, percents, decimals
@@ -55,7 +57,7 @@ def unchecked_figures(reply: str, tool_texts: list[str]) -> list[str]:
     def percent_ok(token: str) -> bool:
         places = _places(token)
         target = _round(_decimal(token), places)
-        return any(_round(v, places) == target for v in percents | decimals) or any(
+        return any(_round(v, places) == target for v in percents) or any(
             _round(v * 100, places) == target for v in decimals
         )
 
