@@ -41,8 +41,8 @@ export function ChangeCard({
     <section className="change-card" aria-label="Proposed change">
       <p>{card.reason}</p>
       <ul className="change-lines">
-        {card.lines.map((line) => (
-          <li key={line.label}>
+        {card.lines.map((line, i) => (
+          <li key={i}>
             <span>{line.label}</span>
             <span className="num">
               <span>{formatValue(line, line.old)}</span>

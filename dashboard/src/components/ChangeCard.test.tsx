@@ -74,6 +74,30 @@ describe("ChangeCard", () => {
     expect(screen.getByRole("button", { name: "Apply" })).toBeTruthy();
   });
 
+  it("shows the message of a 409", async () => {
+    stub(409, { detail: "The profile changed since this was proposed." });
+    render(<ChangeCard card={card} onChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "The profile changed since this was proposed.",
+    );
+  });
+
+  it("shows two lines with the same label", () => {
+    const twice: Card = {
+      ...card,
+      lines: [
+        { label: "One-time expense 2030: Roof", kind: "money", old: 5000, new: null },
+        { label: "One-time expense 2030: Roof", kind: "money", old: 6000, new: null },
+      ],
+    };
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    render(<ChangeCard card={twice} onChange={vi.fn()} />);
+    expect(screen.getAllByText("One-time expense 2030: Roof")).toHaveLength(2);
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
   it("shows Applied and Dismissed without buttons", () => {
     const { rerender } = render(
       <ChangeCard card={{ ...card, status: "applied" }} onChange={vi.fn()} />,
