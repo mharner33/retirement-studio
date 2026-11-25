@@ -78,3 +78,27 @@ def test_describe_lines() -> None:
     ]
     with pytest.raises(ChangeError):
         describe(h, [RemoveOneTime(op="remove_one_time", index=3)])
+
+
+def test_describe_walks_running_state(sample_household: Household) -> None:
+    item = OneTime(year=2030, amount=25_000, label="Roof")
+    changes: list[ProfileChange] = [
+        _set("spending.essential", 65_000),
+        _set("spending.essential", 70_000),
+        AddOneTime(op="add_one_time", item=item),
+        RemoveOneTime(op="remove_one_time", index=0),
+    ]
+    assert describe(sample_household, changes) == [
+        ChangeLine(
+            label="Essential spending per year", kind="money", old=60_000, new=65_000
+        ),
+        ChangeLine(
+            label="Essential spending per year", kind="money", old=65_000, new=70_000
+        ),
+        ChangeLine(
+            label="One-time expense 2030: Roof", kind="money", old=None, new=25_000
+        ),
+        ChangeLine(
+            label="One-time expense 2030: Roof", kind="money", old=25_000, new=None
+        ),
+    ]

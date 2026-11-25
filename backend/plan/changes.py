@@ -124,36 +124,31 @@ def _current(h: Household, path: str) -> float | None:
 def describe(h: Household, changes: list[ProfileChange]) -> list[ChangeLine]:
     lines: list[ChangeLine] = []
     for change in changes:
-        if isinstance(change, SetField):
-            info = _check_path(h, change.path)
-            lines.append(
-                ChangeLine(
-                    label=info.label,
-                    kind=info.kind,
-                    old=_current(h, change.path),
-                    new=change.value,
-                )
-            )
-        elif isinstance(change, AddOneTime):
-            lines.append(
-                ChangeLine(
-                    label=_one_time_label(change.item),
-                    kind="money",
-                    old=None,
-                    new=change.item.amount,
-                )
-            )
-        else:
-            items = h.spending.one_time
-            if not 0 <= change.index < len(items):
-                raise ChangeError(f"There is no one-time expense number {change.index}")
-            item = items[change.index]
-            lines.append(
-                ChangeLine(
-                    label=_one_time_label(item),
-                    kind="money",
-                    old=item.amount,
-                    new=None,
-                )
-            )
+        lines.append(_line(h, change))
+        h = apply_changes(h, [change])
     return lines
+
+
+def _line(h: Household, change: ProfileChange) -> ChangeLine:
+    if isinstance(change, SetField):
+        info = _check_path(h, change.path)
+        return ChangeLine(
+            label=info.label,
+            kind=info.kind,
+            old=_current(h, change.path),
+            new=change.value,
+        )
+    if isinstance(change, AddOneTime):
+        return ChangeLine(
+            label=_one_time_label(change.item),
+            kind="money",
+            old=None,
+            new=change.item.amount,
+        )
+    items = h.spending.one_time
+    if not 0 <= change.index < len(items):
+        raise ChangeError(f"There is no one-time expense number {change.index}")
+    item = items[change.index]
+    return ChangeLine(
+        label=_one_time_label(item), kind="money", old=item.amount, new=None
+    )
