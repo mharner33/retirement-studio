@@ -13,11 +13,9 @@ services:
         required: false
     healthcheck:
       test:
-        - CMD
-        - python
-        - -c
-        - import urllib.request; urllib.request.urlopen("http://localhost:8000/api/health")
-      interval: 30s
+        - CMD-SHELL
+        - python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/health")'
+      interval: 10s
       timeout: 5s
       retries: 3
       start_period: 10s

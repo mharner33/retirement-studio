@@ -19,13 +19,13 @@ Phases 1 to 6 (skeleton, household profile, rules file and projection engine, st
 - `backend/statements/` and `agent/extraction.py`: PDF upload (`POST /api/statements`, several files, one result each), folder scan, masked text, the extraction agent (account and Social Security statements), `PUT` extraction, and `POST /{id}/accept`, which updates the profile. Statuses: uploaded, reading, pending_review, no_text, accepted.
 - `dashboard/src/pages/StatementsPage.tsx` and `StatementReview.tsx`: drop or choose several PDFs at once, one result line per file, an "Extract all" button for every uploaded file, a status list (Uploaded, Reading, Ready to review, No text found, Accepted; it refreshes every 3 s while a file is being read) and a review form per statement. Account statements have editable type, owner, label, balance and cost basis. Social Security statements ask "Whose statement is this?" (required) and have the three monthly amounts. Both show "Nothing is saved until you accept." with Accept and Discard. There is no backend route to discard, so Discard only hides that review until the page is reloaded and leaves the status unchanged, like "Keep current" on the Rules page. The sidebar has Statements.
 - `lefthook.yml`: pre-commit runs all Python and TypeScript checks in parallel.
-- `Containerfile` and `compose.yaml`: a two-stage image (Node builds the dashboard, Python 3.12 with uv 0.13.9 serves everything on port 8000; `Containerfile.dockerignore` mirrors `.containerignore` for Docker builds; `.env` is optional) with `./data` mounted at `/data`.
+- `Containerfile` and `compose.yaml`: a two-stage image (Node builds the dashboard, Python 3.12 with uv 0.13.9 serves everything on port 8000; `Containerfile.dockerignore` mirrors `.containerignore` for Docker builds; `.env` is optional) with `./data` mounted at `/data`. The healthcheck uses the shell form (`CMD-SHELL`) because Podman split the exec form on spaces and always reported the container unhealthy; it runs every 10 s.
 
 ## How to run it
 
 - Setup: `uv sync && npm install` (the `prepare` script installs lefthook and Playwright Chromium)
 - Development: `npm run dev`, then open http://localhost:5173
-- Container: `podman compose up -d`, then open http://localhost:8000. Stop it with `podman compose down`.
+- Container: `npm run container:up` (runs `podman compose up -d --build --wait`: builds, starts and waits for the healthcheck, about 12 s after the build), then open http://localhost:8000. `npm run container:logs` follows the logs; `npm run container:down` stops it.
 - Fresh clone: `mkdir -p data` and `touch .env` (or leave `.env` out; compose treats it as optional). Put PDFs in `data/statements/` or upload them on the Statements page.
 - Checks: `npm run check` (Python, TypeScript and e2e). If port 8000 is taken, set `BACKEND_PORT=8123` for the e2e backend and the Vite proxy.
 

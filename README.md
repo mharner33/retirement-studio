@@ -6,7 +6,7 @@ A retirement analysis and planning tool. It reviews your accounts, applies curre
 
 - Setup: `uv sync && npm install`, then `mkdir -p data` and `touch .env` on a fresh clone.
 - Development: `npm run dev` (backend on port 8000, dashboard on port 5173)
-- Container: `podman compose up -d`, then open http://localhost:8000. Stop it with `podman compose down`. Your profile and files stay in `./data`.
+- Container: `npm run container:up` builds the image, starts the container and waits until it is healthy. Then open http://localhost:8000. `npm run container:logs` follows the logs and `npm run container:down` stops it. Your profile and files stay in `./data`.
 - All checks: `npm run check`. The end-to-end tests need ports 8000 and 5173 free, so stop the container and the dev servers first.
 
 Put your OpenRouter key in `.env` as `OPENROUTER_API_KEY`. It is only needed for statement reading and rules research. Your documents and the database live in `data/`, which is not tracked by git.
