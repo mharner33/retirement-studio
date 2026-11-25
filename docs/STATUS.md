@@ -63,6 +63,10 @@ Phases 1 to 6 (skeleton, household profile, rules file and projection engine, st
 - Screenshots: Profile, Plan, Rules and Statements in light and dark themes. No exclamation marks. Money in tables and fields reads $1,250.00; only the chart axis uses short labels ($1.1M, $550K).
 - Live run with real statements: PENDING, left for the owner (no real statements in `data/` yet). To run it: put your key in `.env`, `podman compose up -d`, open the Statements page, drop one real account statement and one real Social Security statement together, select "Extract all", review, choose whose Social Security statement it is, Accept both, then open Plan. Record the outcome here without account details.
 
+## Chat agent (in progress, `docs/PLAN_CHAT.md`)
+
+- Phase 1 done: `backend/plan/changes.py` (`ProfileChange` set / add_one_time / remove_one_time, the `FIELDS` map of changeable profile paths, `apply_changes`, `describe`) and `POST /api/plan/whatif` (body: a list of changes applied to the saved profile, which is not saved; returns the current and what-if `PlanResult` plus change lines; 422 on a bad change). `plan_for` caches plan results in memory (8 entries). Checked live: the what-if right after `GET /api/plan` took 6.5 s.
+
 ## Next
 
-The chat agent: design in `docs/superpowers/specs/2026-11-25-chat-agent-design.md`, plan in `docs/PLAN_CHAT.md` (5 phases, not started).
+The chat agent: design in `docs/superpowers/specs/2026-11-25-chat-agent-design.md`, plan in `docs/PLAN_CHAT.md`. Phases 2 to 5 remain.

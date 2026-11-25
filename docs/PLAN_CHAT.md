@@ -76,7 +76,7 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - `plan_for(h: Household, rules: TaxRules, rules_file: str, start_year: int, stale: bool) -> PlanResult`: the body of today's `GET /api/plan`, cached as above. `GET /api/plan` calls it.
 - `WhatIfResult(current: PlanResult, whatif: PlanResult, changes: list[ChangeLine])`. `POST /api/plan/whatif` (body `list[ProfileChange]`) → `WhatIfResult`; 409 without a profile; 422 on `ChangeError` with `detail` the message. The saved profile is unchanged.
 
-- [ ] Tests in `test_changes.py`:
+- [x] Tests in `test_changes.py`:
   - `test_set_retirement_age_returns_new_household` (sample, `self.retirement_age` 65 → 65; the input household still has 63).
   - `test_unknown_path_rejected` (`self.first_name` → `ChangeError`).
   - `test_spouse_path_without_spouse_rejected`.
@@ -84,18 +84,18 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
   - `test_plan_to_age_below_current_age_rejected` (Review Focus).
   - `test_add_and_remove_one_time`.
   - `test_describe_lines` (`spending.essential` 60,000 → 70,000 gives `ChangeLine("Essential spending per year", "money", 60000, 70000)`).
-- [ ] Tests in `test_plan.py`:
+- [x] Tests in `test_plan.py`:
   - `test_whatif_retire_at_65` (sample saved; `whatif.best_rows[0]` has wages, `current.best_rows[0]` the same as `GET /api/plan`; `GET /api/profile` still shows 63).
   - `test_whatif_422_on_bad_change` and `test_whatif_409_without_profile`.
   - `test_plan_for_cached` (second call with the same inputs returns the same object without calling `rank`; monkeypatch `rank` to count).
-- [ ] Run `uv run pytest backend/tests/test_changes.py backend/tests/test_plan.py --no-cov`: FAIL, implement, PASS.
-- [ ] Commit `feat: profile changes and what-if plan route`.
+- [x] Run `uv run pytest backend/tests/test_changes.py backend/tests/test_plan.py --no-cov`: FAIL, implement, PASS.
+- [x] Commit `feat: profile changes and what-if plan route`.
 
 **Phase 1 success criteria**
-- [ ] `npm run check` passes.
-- [ ] With the sample profile saved and the backend running, `curl -s -X POST localhost:8000/api/plan/whatif -H 'content-type: application/json' -d '[{"op":"set","path":"self.retirement_age","value":65}]'` returns `current`, `whatif` and one change line "Retirement age (you)" 63 → 65, and `GET /api/profile` still shows 63.
-- [ ] The same call with `"path":"self.first_name"` returns 422 with a plain message.
-- [ ] `time` on the what-if call right after a `GET /api/plan` is under 20 s (the current plan comes from the cache).
+- [x] `npm run check` passes.
+- [x] With the sample profile saved and the backend running, `curl -s -X POST localhost:8000/api/plan/whatif -H 'content-type: application/json' -d '[{"op":"set","path":"self.retirement_age","value":65}]'` returns `current`, `whatif` and one change line "Retirement age (you)" 63 → 65, and `GET /api/profile` still shows 63.
+- [x] The same call with `"path":"self.first_name"` returns 422 with a plain message.
+- [x] `time` on the what-if call right after a `GET /api/plan` is under 20 s (the current plan comes from the cache).
 
 ---
 
