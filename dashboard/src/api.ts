@@ -16,8 +16,9 @@ async function send(
 ): Promise<Response> {
   const res = await fetch(path, {
     method,
-    headers: body === undefined ? {} : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    headers:
+      body === undefined || body instanceof FormData ? {} : { "Content-Type": "application/json" },
+    body: body === undefined || body instanceof FormData ? body : JSON.stringify(body),
     signal,
   });
   if (!res.ok) {
@@ -54,4 +55,8 @@ export function putJson<T>(path: string, body: unknown): Promise<T> {
 
 export function postJson<T>(path: string, body?: unknown): Promise<T> {
   return request<T>(path, "POST", body);
+}
+
+export function postForm<T>(path: string, form: FormData): Promise<T> {
+  return request<T>(path, "POST", form);
 }

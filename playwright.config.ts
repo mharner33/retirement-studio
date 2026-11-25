@@ -8,6 +8,8 @@ const dataDir = mkdtempSync(join(tmpdir(), "retirement-studio-e2e-"));
 
 export default defineConfig({
   testDir: "e2e",
+  // The specs share one backend and one profile, so they run one at a time.
+  workers: 1,
   use: { baseURL: "http://localhost:5173" },
   webServer: [
     {

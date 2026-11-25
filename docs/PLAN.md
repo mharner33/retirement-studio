@@ -416,18 +416,18 @@ Yearly order (fixed here because the tests do not decide it): (1) wages and 401(
   - Social Security statements show "Whose statement is this?" (You or Spouse, required) and the three editable monthly amounts.
 - Both forms have "Accept" and "Discard" buttons, and the page shows "Nothing is saved until you accept."
 
-- [ ] Tests:
+- [x] Tests:
   - Dropping 3 files sends one multipart request with 3 `files` parts and lists 3 results.
   - A rejected file shows its error while the others show as saved.
   - The account review form edits a balance before Accept and sends the edited value.
   - The Social Security form blocks Accept until a person is chosen.
   - "No text found" shows for `no_text`.
   - e2e: upload two generated PDFs in one action, then `PUT` an account extraction and a Social Security extraction through the API (no model). Review and accept both. The Profile page shows the new balance and the spouse's new Social Security estimates.
-- [ ] Commit `feat: statements review page`.
+- [x] Commit `feat: statements review page`.
 
 **Phase 6 success criteria**
-- [ ] `npm run check` passes.
-- [ ] `podman build` and `podman compose up -d` work. Inside the container, `/api/health` is ok, the dashboard loads at `localhost:8000`, a profile saved through the UI survives `podman compose down && podman compose up -d` (stored in `./data/studio.db`), and an uploaded PDF appears in `./data/statements/`.
+- [x] `npm run check` passes.
+- [x] `podman build` and `podman compose up -d` work. Inside the container, `/api/health` is ok, the dashboard loads at `localhost:8000`, a profile saved through the UI survives `podman compose down && podman compose up -d` (stored in `./data/studio.db`), and an uploaded PDF appears in `./data/statements/`.
 - [ ] Live run by hand with `.env`: upload one real account statement and one real Social Security statement together, run "Extract all", review, accept, and the Plan page updates. Record the outcome in `docs/STATUS.md` with no account details.
-- [ ] Playwright MCP: Profile, Plan, Rules and Statements pages all render in both themes; money everywhere looks like `$1,250.00`; no exclamation marks.
-- [ ] `docs/STATUS.md` describes everything built and how to run it; the chat agent is listed as next, in `docs/PLAN_CHAT.md`.
+- [x] Playwright MCP: Profile, Plan, Rules and Statements pages all render in both themes; money everywhere looks like `$1,250.00`; no exclamation marks.
+- [x] `docs/STATUS.md` describes everything built and how to run it; the chat agent is listed as next, in `docs/PLAN_CHAT.md`.

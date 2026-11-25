@@ -87,4 +87,14 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Rules" }));
     expect(await screen.findByRole("heading", { name: "Rules" })).toBeTruthy();
   });
+
+  it("opens the statements page from the sidebar", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response("[]"))),
+    );
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Statements" }));
+    expect(await screen.findByRole("heading", { name: "Statements" })).toBeTruthy();
+  });
 });

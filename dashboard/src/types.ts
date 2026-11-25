@@ -118,3 +118,46 @@ export interface RulesStatus {
   pending_file: string | null;
   changes: RuleChange[];
 }
+
+export interface ExtractedAccount {
+  kind: "pretax" | "roth" | "taxable" | "cash" | "hsa";
+  owner_hint: string;
+  owner: "self" | "spouse";
+  label: string;
+  balance: number;
+  cost_basis: number | null;
+  last4: string | null;
+}
+
+export interface ExtractedAccountStatement {
+  doc_type: "account";
+  institution: string;
+  statement_date: string;
+  accounts: ExtractedAccount[];
+}
+
+export interface ExtractedSs {
+  doc_type: "social_security";
+  statement_date: string;
+  person: "self" | "spouse" | null;
+  monthly_at_62: number;
+  monthly_at_fra: number;
+  fra_age: string;
+  monthly_at_70: number;
+}
+
+export type ExtractedDocument = ExtractedAccountStatement | ExtractedSs;
+
+export interface UploadResult {
+  filename: string;
+  id: number | null;
+  error: string | null;
+}
+
+export interface StatementRow {
+  id: number;
+  filename: string;
+  status: "uploaded" | "reading" | "pending_review" | "no_text" | "accepted";
+  extracted: ExtractedDocument | null;
+  created_at: string;
+}

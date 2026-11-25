@@ -163,6 +163,50 @@ describe("RulesPage", () => {
     expect(server.calls.some((c) => c.method === "POST")).toBe(false);
   });
 
+  it("disables Accept while the request is in flight", async () => {
+    let release: ((r: Response) => void) | undefined;
+    const server: Server = { status: pending, calls: [] };
+    serve(server);
+    const base = vi.mocked(fetch);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((path: string, init?: RequestInit) =>
+        path.endsWith("/accept")
+          ? new Promise<Response>((resolve) => {
+              server.calls.push({ path, method: "POST" });
+              release = resolve;
+            })
+          : base(path, init),
+      ),
+    );
+    render(<RulesPage />);
+    const accept = await screen.findByRole("button", { name: "Accept" });
+    fireEvent.click(accept);
+    await waitFor(() => {
+      expect((accept as HTMLButtonElement).disabled).toBe(true);
+    });
+    fireEvent.click(accept);
+    release?.(new Response("{}"));
+    await waitFor(() => {
+      expect((accept as HTMLButtonElement).disabled).toBe(false);
+    });
+    expect(server.calls.filter((c) => c.path.endsWith("/accept"))).toHaveLength(1);
+  });
+
+  it("aborts the initial load when the page unmounts", () => {
+    const signals: (AbortSignal | null | undefined)[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_path: string, init?: RequestInit) => {
+        signals.push(init?.signal);
+        return new Promise<Response>(() => undefined);
+      }),
+    );
+    const { unmount } = render(<RulesPage />);
+    unmount();
+    expect(signals[0]?.aborted).toBe(true);
+  });
+
   it("starts a refresh", async () => {
     const server: Server = { status: current, calls: [] };
     serve(server);

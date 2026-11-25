@@ -1,6 +1,6 @@
 # Status
 
-Phases 1 (skeleton), 2 (household profile), 3 (rules file and projection engine), 4 (strategy search and Plan page) and 5 (rules research agent and Rules page) are complete, with one Phase 3 criterion open (see below). The profile can be entered, saved and reloaded. `GET /api/plan` ranks strategies, and the Plan page shows the best one, a comparison table, a balance chart and the year-by-year table.
+Phases 1 to 6 (skeleton, household profile, rules file and projection engine, strategy search and Plan page, rules research agent and Rules page, statement extraction and container release) are built. Two criteria stay open: one Phase 3 criterion (see below) and the Phase 6 live run with real statements (see Phase 6 checks). The profile can be entered, saved and reloaded. `GET /api/plan` ranks strategies, and the Plan page shows the best one, a comparison table, a balance chart and the year-by-year table.
 
 ## What exists
 
@@ -16,14 +16,17 @@ Phases 1 (skeleton), 2 (household profile), 3 (rules file and projection engine)
 - `agent/`: the entry point `run(task, thread_id)`, with one tool that calls the health route. Tests use a stub model.
 - `dashboard/`: React shell with light and dark themes per `docs/BRAND.md` a Status page, and a Profile page: a six-step guided form (You, Spouse, Income, Accounts, Spending, Assumptions) for a new profile, and one editable page once a profile exists. Money fields show $1,250.00 when not focused.
 - `e2e/`: Playwright tests of the status page, the dark theme and the profile form (fill, save, reload) (`playwright.config.ts` starts both servers).
+- `backend/statements/` and `agent/extraction.py`: PDF upload (`POST /api/statements`, several files, one result each), folder scan, masked text, the extraction agent (account and Social Security statements), `PUT` extraction, and `POST /{id}/accept`, which updates the profile. Statuses: uploaded, reading, pending_review, no_text, accepted.
+- `dashboard/src/pages/StatementsPage.tsx` and `StatementReview.tsx`: drop or choose several PDFs at once, one result line per file, an "Extract all" button for every uploaded file, a status list (Uploaded, Reading, Ready to review, No text found, Accepted; it refreshes every 3 s while a file is being read) and a review form per statement. Account statements have editable type, owner, label, balance and cost basis. Social Security statements ask "Whose statement is this?" (required) and have the three monthly amounts. Both show "Nothing is saved until you accept." with Accept and Discard. There is no backend route to discard, so Discard only hides that review until the page is reloaded and leaves the status unchanged, like "Keep current" on the Rules page. The sidebar has Statements.
 - `lefthook.yml`: pre-commit runs all Python and TypeScript checks in parallel.
-- `Containerfile` and `compose.yaml`: a two-stage image (Node builds the dashboard, Python 3.12 serves everything on port 8000) with `./data` mounted at `/data`.
+- `Containerfile` and `compose.yaml`: a two-stage image (Node builds the dashboard, Python 3.12 with uv 0.13.9 serves everything on port 8000; `Containerfile.dockerignore` mirrors `.containerignore` for Docker builds; `.env` is optional) with `./data` mounted at `/data`.
 
 ## How to run it
 
 - Setup: `uv sync && npm install` (the `prepare` script installs lefthook and Playwright Chromium)
 - Development: `npm run dev`, then open http://localhost:5173
 - Container: `podman compose up -d`, then open http://localhost:8000. Stop it with `podman compose down`.
+- Fresh clone: `mkdir -p data` and `touch .env` (or leave `.env` out; compose treats it as optional). Put PDFs in `data/statements/` or upload them on the Statements page.
 - Checks: `npm run check` (Python, TypeScript and e2e). If port 8000 is taken, set `BACKEND_PORT=8123` for the e2e backend and the Vite proxy.
 
 ## Phase 3 checks
@@ -53,6 +56,13 @@ Phases 1 (skeleton), 2 (household profile), 3 (rules file and projection engine)
 - Live run (done by the controller with a real model): the research agent produced the pending file `retirement_rules_2026-11-24.md` in `data/rules/`, and its JSON validates. It has 3 changes, all source URLs, and the figures are unchanged. Its Colorado section reads "Not refreshed on 2026-11-24: source unavailable." because tax.colorado.gov returns 403. Model cost was not recorded. The file is not accepted and is left for the owner to review; the Rules page shows "Not refreshed: Colorado (source unavailable)" for it.
 - The review flow (modified seed posted through the API, change row, Accept, date updates) passes in Playwright and was screenshotted in light and dark themes with no exclamation marks.
 
+## Phase 6 checks
+
+- Release fixes from earlier reviews: uv image pinned, `Containerfile.dockerignore`, optional `.env`, healthcheck `start_period: 10s`, RulesPage initial load aborts on unmount, "Keep current" remembers the file name (a newer pending file shows again), Accept is disabled while in flight, and `e2e/rules.spec.ts` compares with the date from `GET /api/rules/status`.
+- Container: `podman compose build` and `up -d` (this host's compose talks to the podman machine, so `podman build` alone does not refresh the image compose runs; use `podman compose build`). `/api/health` returned `{"status":"ok"}`, `/` served the dashboard, a profile edited and saved in the UI survived `down` then `up`, and an uploaded fake PDF appeared in `./data/statements/`. The test profile and statements were then removed from `./data` and `studio.db` was restored.
+- Screenshots: Profile, Plan, Rules and Statements in light and dark themes. No exclamation marks. Money in tables and fields reads $1,250.00; only the chart axis uses short labels ($1.1M, $550K).
+- Live run with real statements: PENDING, left for the owner (no real statements in `data/` yet). To run it: put your key in `.env`, `podman compose up -d`, open the Statements page, drop one real account statement and one real Social Security statement together, select "Extract all", review, choose whose Social Security statement it is, Accept both, then open Plan. Record the outcome here without account details.
+
 ## Next
 
-Phase 6: statement extraction and container release (see `docs/PLAN.md`).
+The chat agent, planned in `docs/PLAN_CHAT.md` (not written yet).

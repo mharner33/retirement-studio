@@ -28,13 +28,13 @@ interface Loaded {
   stale: string[];
 }
 
-async function load(): Promise<Loaded> {
-  const status = await getJson<RulesStatus>("/api/rules/status");
+async function load(signal?: AbortSignal): Promise<Loaded> {
+  const status = await getJson<RulesStatus>("/api/rules/status", signal);
   const [current, pending] = await Promise.all([
-    getText(`/api/rules/${status.current_file}`),
+    getText(`/api/rules/${status.current_file}`, signal),
     status.pending_file === null
       ? Promise.resolve("")
-      : getText(`/api/rules/${status.pending_file}`),
+      : getText(`/api/rules/${status.pending_file}`, signal),
   ]);
   return { status, urls: sources(current), stale: notRefreshed(pending) };
 }
@@ -48,7 +48,8 @@ function errorText(err: unknown): string {
 export function RulesPage() {
   const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [kept, setKept] = useState(false);
+  const [kept, setKept] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [started, setStarted] = useState(false);
 
   async function reload(): Promise<void> {
@@ -61,19 +62,25 @@ export function RulesPage() {
   }
 
   useEffect(() => {
-    load().then(setData, (err: unknown) => {
-      setError(errorText(err));
+    const controller = new AbortController();
+    load(controller.signal).then(setData, (err: unknown) => {
+      if (!controller.signal.aborted) setError(errorText(err));
     });
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   async function accept(file: string): Promise<void> {
+    setBusy(true);
     try {
       await postJson(`/api/rules/${file}/accept`);
+      await reload();
     } catch (err) {
       setError(errorText(err));
-      return;
+    } finally {
+      setBusy(false);
     }
-    await reload();
   }
 
   async function refresh(): Promise<void> {
@@ -104,7 +111,7 @@ export function RulesPage() {
   }
 
   const { status, urls, stale } = data;
-  const pendingFile = kept ? null : status.pending_file;
+  const pendingFile = status.pending_file === kept ? null : status.pending_file;
   return (
     <>
       <h2>Rules</h2>
@@ -187,6 +194,7 @@ export function RulesPage() {
             <button
               type="button"
               className="primary"
+              disabled={busy}
               onClick={() => {
                 void accept(pendingFile);
               }}
@@ -197,7 +205,7 @@ export function RulesPage() {
               type="button"
               className="secondary-button"
               onClick={() => {
-                setKept(true);
+                setKept(pendingFile);
               }}
             >
               Keep current

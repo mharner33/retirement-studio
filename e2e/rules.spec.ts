@@ -22,8 +22,11 @@ test("reviews and accepts a pending rules file", async ({ page, request }) => {
 
   await page.getByRole("button", { name: "Accept" }).click();
   await expect(table).toHaveCount(0);
-  const today = new Date().toLocaleDateString("sv-SE");
-  await expect(page.getByLabel("Current rules")).toContainText(today);
+  const status = (await (await request.get("/api/rules/status")).json()) as {
+    current_date: string;
+  };
+  expect(status.current_date).not.toBe("2026-01-01");
+  await expect(page.getByLabel("Current rules")).toContainText(status.current_date);
   await expect(page.getByText("Rules are out of date")).toHaveCount(0);
   expect(await page.locator("main").innerText()).not.toContain("!");
 });

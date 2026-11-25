@@ -3,15 +3,17 @@ import { getJson } from "./api";
 import { PlanPage } from "./pages/PlanPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { RulesPage } from "./pages/RulesPage";
+import { StatementsPage } from "./pages/StatementsPage";
 import { applyTheme, initialTheme, type Theme } from "./theme";
 
-type Page = "status" | "profile" | "plan" | "rules";
+type Page = "status" | "profile" | "plan" | "rules" | "statements";
 
 const PAGES: { id: Page; label: string }[] = [
   { id: "status", label: "Status" },
   { id: "profile", label: "Profile" },
   { id: "plan", label: "Plan" },
   { id: "rules", label: "Rules" },
+  { id: "statements", label: "Statements" },
 ];
 type Health = "checking" | "up" | "down";
 
@@ -86,6 +88,7 @@ export function App() {
         {page === "profile" && <ProfilePage />}
         {page === "plan" && <PlanPage />}
         {page === "rules" && <RulesPage />}
+        {page === "statements" && <StatementsPage />}
       </main>
     </div>
   );
