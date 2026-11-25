@@ -65,4 +65,4 @@ Phases 1 to 6 (skeleton, household profile, rules file and projection engine, st
 
 ## Next
 
-The chat agent, planned in `docs/PLAN_CHAT.md` (not written yet).
+The chat agent: design in `docs/superpowers/specs/2026-11-25-chat-agent-design.md`, plan in `docs/PLAN_CHAT.md` (5 phases, not started).
