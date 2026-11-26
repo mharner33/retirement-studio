@@ -15,7 +15,7 @@ export default defineConfig({
     {
       command: `uv run -m uvicorn backend.main:app --port ${backendPort}`,
       url: `http://localhost:${backendPort}/api/health`,
-      env: { DATA_DIR: dataDir, BACKEND_PORT: backendPort },
+      env: { DATA_DIR: dataDir, BACKEND_PORT: backendPort, CHAT_AGENT: "off" },
       reuseExistingServer: false,
     },
     {

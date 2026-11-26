@@ -13,7 +13,14 @@ def test_connect_creates_tables(tmp_path) -> None:
     names = {
         r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
     }
-    assert names == {"profile", "statements", "rules"}
+    assert names == {
+        "profile",
+        "statements",
+        "rules",
+        "chat_messages",
+        "chat_changes",
+        "chat_turn",
+    }
 
 
 def test_serves_dashboard_when_built(tmp_path) -> None:

@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
 from backend.engine.projection import Strategy, YearRow
+from backend.plan.changes import ChangeLine
 
 
 class PlanOption(BaseModel):
@@ -19,3 +20,9 @@ class PlanResult(BaseModel):
     top: list[PlanOption]
     baseline: PlanOption
     best_rows: list[YearRow]
+
+
+class WhatIfResult(BaseModel):
+    current: PlanResult
+    whatif: PlanResult
+    changes: list[ChangeLine]

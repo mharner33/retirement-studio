@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import { getJson } from "./api";
+import { ChatPage } from "./pages/ChatPage";
 import { PlanPage } from "./pages/PlanPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { RulesPage } from "./pages/RulesPage";
 import { StatementsPage } from "./pages/StatementsPage";
 import { applyTheme, initialTheme, type Theme } from "./theme";
 
-type Page = "status" | "profile" | "plan" | "rules" | "statements";
+type Page = "status" | "profile" | "plan" | "chat" | "rules" | "statements";
 
 const PAGES: { id: Page; label: string }[] = [
   { id: "status", label: "Status" },
   { id: "profile", label: "Profile" },
   { id: "plan", label: "Plan" },
+  { id: "chat", label: "Chat" },
   { id: "rules", label: "Rules" },
   { id: "statements", label: "Statements" },
 ];
@@ -87,6 +89,7 @@ export function App() {
         )}
         {page === "profile" && <ProfilePage />}
         {page === "plan" && <PlanPage />}
+        {page === "chat" && <ChatPage />}
         {page === "rules" && <RulesPage />}
         {page === "statements" && <StatementsPage />}
       </main>

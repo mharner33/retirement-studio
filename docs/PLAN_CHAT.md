@@ -76,7 +76,7 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - `plan_for(h: Household, rules: TaxRules, rules_file: str, start_year: int, stale: bool) -> PlanResult`: the body of today's `GET /api/plan`, cached as above. `GET /api/plan` calls it.
 - `WhatIfResult(current: PlanResult, whatif: PlanResult, changes: list[ChangeLine])`. `POST /api/plan/whatif` (body `list[ProfileChange]`) → `WhatIfResult`; 409 without a profile; 422 on `ChangeError` with `detail` the message. The saved profile is unchanged.
 
-- [ ] Tests in `test_changes.py`:
+- [x] Tests in `test_changes.py`:
   - `test_set_retirement_age_returns_new_household` (sample, `self.retirement_age` 65 → 65; the input household still has 63).
   - `test_unknown_path_rejected` (`self.first_name` → `ChangeError`).
   - `test_spouse_path_without_spouse_rejected`.
@@ -84,18 +84,18 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
   - `test_plan_to_age_below_current_age_rejected` (Review Focus).
   - `test_add_and_remove_one_time`.
   - `test_describe_lines` (`spending.essential` 60,000 → 70,000 gives `ChangeLine("Essential spending per year", "money", 60000, 70000)`).
-- [ ] Tests in `test_plan.py`:
+- [x] Tests in `test_plan.py`:
   - `test_whatif_retire_at_65` (sample saved; `whatif.best_rows[0]` has wages, `current.best_rows[0]` the same as `GET /api/plan`; `GET /api/profile` still shows 63).
   - `test_whatif_422_on_bad_change` and `test_whatif_409_without_profile`.
   - `test_plan_for_cached` (second call with the same inputs returns the same object without calling `rank`; monkeypatch `rank` to count).
-- [ ] Run `uv run pytest backend/tests/test_changes.py backend/tests/test_plan.py --no-cov`: FAIL, implement, PASS.
-- [ ] Commit `feat: profile changes and what-if plan route`.
+- [x] Run `uv run pytest backend/tests/test_changes.py backend/tests/test_plan.py --no-cov`: FAIL, implement, PASS.
+- [x] Commit `feat: profile changes and what-if plan route`.
 
 **Phase 1 success criteria**
-- [ ] `npm run check` passes.
-- [ ] With the sample profile saved and the backend running, `curl -s -X POST localhost:8000/api/plan/whatif -H 'content-type: application/json' -d '[{"op":"set","path":"self.retirement_age","value":65}]'` returns `current`, `whatif` and one change line "Retirement age (you)" 63 → 65, and `GET /api/profile` still shows 63.
-- [ ] The same call with `"path":"self.first_name"` returns 422 with a plain message.
-- [ ] `time` on the what-if call right after a `GET /api/plan` is under 20 s (the current plan comes from the cache).
+- [x] `npm run check` passes.
+- [x] With the sample profile saved and the backend running, `curl -s -X POST localhost:8000/api/plan/whatif -H 'content-type: application/json' -d '[{"op":"set","path":"self.retirement_age","value":65}]'` returns `current`, `whatif` and one change line "Retirement age (you)" 63 → 65, and `GET /api/profile` still shows 63.
+- [x] The same call with `"path":"self.first_name"` returns 422 with a plain message.
+- [x] `time` on the what-if call right after a `GET /api/plan` is under 20 s (the current plan comes from the cache).
 
 ---
 
@@ -109,8 +109,8 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - `mask_for_model(text: str, h: Household) -> str`: self first name → `[YOU]`, spouse first name → `[SPOUSE]` (whole words, case-insensitive), then `backend.statements.pdf.mask(text, h.mask_terms)` (terms → `[MASKED]`, long digit runs → last 4).
 - `unmask(text: str, h: Household) -> str`: `[YOU]` and `[SPOUSE]` back to the first names. `[MASKED]` stays.
 
-- [ ] Tests: `test_masks_first_names_whole_words` (name "Ann": "Ann's annual budget" → "[YOU]'s annual budget") (Review Focus); `test_masks_terms_and_account_numbers`; `test_unmask_restores_names_only`; `test_spouse_placeholder_unused_without_spouse`.
-- [ ] FAIL, implement, PASS. Commit `feat: chat masking`.
+- [x] Tests: `test_masks_first_names_whole_words` (name "Ann": "Ann's annual budget" → "[YOU]'s annual budget") (Review Focus); `test_masks_terms_and_account_numbers`; `test_unmask_restores_names_only`; `test_spouse_placeholder_unused_without_spouse`.
+- [x] FAIL, implement, PASS. Commit `feat: chat masking`.
 
 ### Task 2.2: Chat store, routes and background turn
 
@@ -134,7 +134,7 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - `create_app` sets a `working` turn to `failed` at startup.
 - `failed` is cleared to `working` by the next message.
 
-- [ ] Tests (monkeypatch `run_chat` where no agent should run):
+- [x] Tests (monkeypatch `run_chat` where no agent should run):
   - `test_post_message_202_and_stores_masked` (sample name "Alex": text "Can Alex retire at 65" is stored as "Can [YOU] retire at 65"; `GET /api/chat` shows "Can Alex retire at 65"; status `working`).
   - `test_post_message_409_while_working` (Review Focus; the background function was called once).
   - `test_post_message_409_without_profile` and `test_blank_message_422`.
@@ -145,7 +145,7 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
   - `test_startup_marks_working_turn_failed` (Review Focus; write `working`, build a new app on the same dir, status `failed`).
   - `test_run_chat_failure_marks_failed` (patch the import to raise).
   - `test_delete_clears_conversation` and `test_delete_409_while_working`.
-- [ ] FAIL, implement, PASS. Commit `feat: chat storage, routes and background turn`.
+- [x] FAIL, implement, PASS. Commit `feat: chat storage, routes and background turn`.
 
 ### Task 2.3: Spending benchmark
 
@@ -157,13 +157,13 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - `benchmark(h: Household, plan: PlanResult) -> Benchmark`: the age group of the older living person today; `planned_annual` is the `spending` of the first row of `plan.best_rows` in which `self` has reached `retirement_age` (the first row if already retired); the income band whose range contains `planned_annual`.
 - `GET /api/chat/benchmark` → `Benchmark` (409 without a profile; uses `plan_for`).
 
-- [ ] Tests: `test_seed_validates` (bands ascending, last `max_income` None, the source URL is on bls.gov); `test_picks_band_for_planned_spending`; `test_already_retired_uses_first_row`; `test_age_group_of_older_person`.
-- [ ] FAIL, implement, PASS. Commit `feat: spending benchmark`.
+- [x] Tests: `test_seed_validates` (bands ascending, last `max_income` None, the source URL is on bls.gov); `test_picks_band_for_planned_spending`; `test_already_retired_uses_first_row`; `test_age_group_of_older_person`.
+- [x] FAIL, implement, PASS. Commit `feat: spending benchmark`.
 
 **Phase 2 success criteria**
-- [ ] `npm run check` passes.
-- [ ] With the sample profile saved and `run_chat` not yet wired to an agent (the import fails and the turn goes `failed`): `curl -X POST localhost:8000/api/chat/messages -H 'content-type: application/json' -d '{"text":"Can Alex retire at 65"}'` → 202; then `GET /api/chat` shows the message with "Alex" and status `failed`; `sqlite3 data/studio.db "select text from chat_messages"` shows "[YOU]".
-- [ ] `GET /api/chat/benchmark` returns an age group, an income band and the BLS URL.
+- [x] `npm run check` passes.
+- [x] With the sample profile saved and `run_chat` not yet wired to an agent (the import fails and the turn goes `failed`): `curl -X POST localhost:8000/api/chat/messages -H 'content-type: application/json' -d '{"text":"Can Alex retire at 65"}'` → 202; then `GET /api/chat` shows the message with "Alex" and status `failed`; `sqlite3 data/studio.db "select text from chat_messages"` shows "[YOU]".
+- [x] `GET /api/chat/benchmark` returns an age group, an income band and the BLS URL.
 
 ---
 
@@ -177,8 +177,8 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - `pages.fetch_text(web: httpx.Client, url: str, allowed: list[str], find: str = "") -> str`: the existing `fetch_page` body from `rules_research.py` (rejection message, PDF text, `find`, 40,000-character cut), with `allowed` as a parameter. `USER_AGENT` and `make_web_client()` move here too.
 - `numbers.unchecked_figures(reply: str, tool_texts: list[str]) -> list[str]`: the dollar tokens (`$` followed by digits with optional commas and cents) and percent tokens (digits with optional decimals followed by `%`) in `reply` that match no number in `tool_texts`. Numbers in tool texts are every `$` token, every `%` token and every bare number. A dollar token matches a tool number equal to it in cents, or equal after rounding to whole dollars when the token has no cents. A percent token `p` matches a tool number `v` when `v` or `v × 100` rounds to `p` at the token's decimal places. Ages, years and other bare numbers in the reply are not checked. Returns tokens as written.
 
-- [ ] Tests: `test_matches_formatted_money` (`"$1,248,000.00"` vs `"1248000.0"` → `[]`); `test_matches_whole_dollars` (`"$86,000"` vs `"85999.6"` → `[]`); `test_flags_invented_money` (`"$86,000.00"` vs `"85000"` → `["$86,000.00"]`); `test_matches_rate_as_percent` (`"6.2%"` vs `"0.062"` → `[]`); `test_ignores_years_and_ages` (`"In 2030 at 67"` → `[]`).
-- [ ] FAIL, implement, PASS; `uv run pytest agent --no-cov` still green. Commit `refactor: shared page fetching; feat: figure check`.
+- [x] Tests: `test_matches_formatted_money` (`"$1,248,000.00"` vs `"1248000.0"` → `[]`); `test_matches_whole_dollars` (`"$86,000"` vs `"85999.6"` → `[]`); `test_flags_invented_money` (`"$86,000.00"` vs `"85000"` → `["$86,000.00"]`); `test_matches_rate_as_percent` (`"6.2%"` vs `"0.062"` → `[]`); `test_ignores_years_and_ages` (`"In 2030 at 67"` → `[]`).
+- [x] FAIL, implement, PASS; `uv run pytest agent --no-cov` still green. Commit `refactor: shared page fetching; feat: figure check`.
 
 ### Task 3.2: Chat agent
 
@@ -203,7 +203,7 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - Flow: `GET /api/chat/context`; build the history (user and assistant messages; earlier turns' tool results go into the system prompt as "Figures from earlier answers"); run the agent; collect this turn's tool message texts; run `unchecked_figures` against this turn's plus the earlier tool results. On a mismatch, invoke once more with the conversation so far plus a message listing the figures that are not in any tool result and asking for a rewrite using only tool figures; check again. `POST /api/chat/reply` with `unchecked` true if the second check still fails.
 - System prompt essentials: answer about this household using tools; state no number that is not in a tool result, and copy figures exactly as tools give them; say which source each answer used; propose a change only after a what-if supports it; for spouse or account changes, point to the Profile or Statements page; Medicaid asset limits from the official page; plain business English, no exclamation marks, not professional advice; refer to people as `[YOU]` and `[SPOUSE]`; call `report_step` before slow tools.
 
-- [ ] Tests (stub model, backend `TestClient` as `client`, `httpx.MockTransport` as `web`; sample profile saved; plan routes monkeypatched to small fixed `PlanResult`s so tests stay fast):
+- [x] Tests (stub model, backend `TestClient` as `client`, `httpx.MockTransport` as `web`; sample profile saved; plan routes monkeypatched to small fixed `PlanResult`s so tests stay fast):
   - `test_whatif_reply_with_proposal` (the stub calls `run_whatif` with retirement age 65, then `propose_change`, then replies with a figure copied from the tool result; `GET /api/chat` shows the reply, source "Plan engine", one proposed card, `unchecked` false).
   - `test_invented_figure_retried_then_flagged` (both replies contain `$12,345.00`; the stub saw a second request naming `$12,345.00`; the stored reply has `unchecked` true).
   - `test_invented_figure_fixed_on_retry` (`unchecked` false).
@@ -211,12 +211,12 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
   - `test_fetch_page_rejects_unlisted_url` and `test_fetch_page_source_recorded`.
   - `test_model_never_sees_first_name` (the user message "Can Alex retire at 65"; no message in `stub.seen` contains "Alex").
   - `test_report_step_sets_step`.
-- [ ] FAIL, implement, PASS. Commit `feat: planning chat agent`.
+- [x] FAIL, implement, PASS. Commit `feat: planning chat agent`.
 
 **Phase 3 success criteria**
-- [ ] `npm run check` passes.
-- [ ] `uv run pytest agent --no-cov -q` passes, including the rules research tests after the `pages.py` move.
-- [ ] `test_whatif_reply_with_proposal` drives the full turn through the real backend routes (`POST /api/chat/messages` → `respond` → `GET /api/chat` shows the reply and status `idle`).
+- [x] `npm run check` passes.
+- [x] `uv run pytest agent --no-cov -q` passes, including the rules research tests after the `pages.py` move.
+- [x] `test_whatif_reply_with_proposal` drives the full turn through the real backend routes (`POST /api/chat/messages` → `respond` → `GET /api/chat` shows the reply and status `idle`).
 
 ---
 
@@ -231,7 +231,7 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 - `ChatPage`: loads `GET /api/chat`; shows messages (owner and "Studio"), each assistant reply with its sources (web sources as links, others as text) and, when `unchecked`, the note "Some figures could not be checked."; a text box with placeholder "Ask about your plan" and "Send" (disabled while `working` or blank); while `working`, the step label (or "Working on it" with no step) and a poll every 2,000 ms that stops when the status leaves `working`; on `failed`, "This reply did not finish. Ask again."; "New conversation" (`DELETE /api/chat`, disabled while working); "Complete your profile first" on 409 from Send or when `GET /api/profile` is 404.
 - `ChangeCard`: one row per line, label, old and new (money with `formatUsd`, rates as percentages, ages as plain numbers, a missing value as "None"), "Apply" and "Dismiss" while `proposed`; "Applied" or "Dismissed" otherwise; an Apply 422 shows the message on the card.
 
-- [ ] Tests:
+- [x] Tests:
   - Renders a conversation with a reply, its sources and a change card from a mocked `ChatState`.
   - Send posts `{"text": ...}`, clears the box, shows the step label and polls until `idle` (fake timers).
   - Send is disabled while `working`.
@@ -240,12 +240,12 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
   - Change card: money line reads `$60,000.00` → `$70,000.00`; Apply posts to the apply route and shows "Applied"; a 422 shows the message.
   - New conversation calls `DELETE /api/chat`.
   - e2e (no model; the Playwright backend runs with `CHAT_AGENT=off`, so `run_chat` returns at once and leaves the turn `working`): save the sample profile, post a message, then `POST /api/chat/reply` through the API with a reply and a proposal for `self.retirement_age` 65. Open Chat, see the reply and the card, Apply, open Profile and see retirement age 65.
-- [ ] `CHAT_AGENT=off` is read in `run_chat` only (documented in `docs/STATUS.md`), so e2e never calls a model.
-- [ ] Commit `feat: chat page with change cards`.
+- [x] `CHAT_AGENT=off` is read in `run_chat` only (documented in `docs/STATUS.md`), so e2e never calls a model.
+- [x] Commit `feat: chat page with change cards`.
 
 **Phase 4 success criteria**
-- [ ] `npm run check` passes.
-- [ ] Playwright screenshots of the Chat page with a reply, a sources line, a change card and the unchecked note, in light and dark themes, colors per `docs/BRAND.md`, money as `$1,250.00`, no exclamation marks.
+- [x] `npm run check` passes.
+- [x] Playwright screenshots of the Chat page with a reply, a sources line, a change card and the unchecked note, in light and dark themes, colors per `docs/BRAND.md`, money as `$1,250.00`, no exclamation marks.
 
 ---
 
@@ -255,16 +255,16 @@ Builder's calls fixed here (deviations from the design's suggestions, all within
 
 **Files:** Modify `docs/STATUS.md`, `README.md` (one line on the Chat page).
 
-- [ ] `npm run container:up`; the Chat page loads at `localhost:8000`; a conversation survives `npm run container:down` and `container:up`.
-- [ ] Commit `docs: chat agent status`.
+- [x] `npm run container:up`; the Chat page loads at `localhost:8000`; a conversation survives `npm run container:down` and `container:up`. (checked with the built image on port 8124 and a scratch volume, so the running container and `./data` were not touched)
+- [x] Commit `docs: chat agent status`.
 
 **Phase 5 success criteria**
-- [ ] `npm run check` passes.
-- [ ] Container: the image builds, `/api/health` is ok, Chat loads, the conversation survives a restart, and a turn interrupted by `container:down` shows "This reply did not finish. Ask again." after `container:up`.
-- [ ] Live run by hand with `.env` (the only step that calls a real model), the owner's three questions in one conversation:
+- [x] `npm run check` passes.
+- [x] Container: the image builds, `/api/health` is ok, Chat loads, the conversation survives a restart, and a turn interrupted by `container:down` shows "This reply did not finish. Ask again." after `container:up`. (same scratch container)
+- [x] Live run by hand with `.env` (the only step that calls a real model), the owner's three questions in one conversation: (run on a scratch data folder with the sample household; the card came on a follow-up request, see `docs/STATUS.md`)
   - "What if I retire at 65 instead of 63?": the reply compares both plans with figures that match the Plan page for each, cites the plan engine and offers a retirement age card. Apply it, and the Plan page reflects 65. (Then set it back in the form.)
   - "What is the average monthly spend for a retired couple with our savings level?": the reply gives the BLS age-group and income-band monthly figures and the household's planned monthly spending, citing the plan engine and the BLS URL.
   - "What are the estimated costs for Medicare/Medicaid at 65?": the reply gives Part B from the rules file, any Part D or Medigap figures with their official URL, and says Medicaid asset limits rule it out, citing the page.
   - No reply shows "Some figures could not be checked." for these three; if one does, record the figure and fix the tool or prompt.
   - Record the outcome in `docs/STATUS.md` without account details, plus any source URLs that refused fetches.
-- [ ] `docs/STATUS.md` describes the chat agent, its routes, `CHAT_AGENT=off`, and how to run it.
+- [x] `docs/STATUS.md` describes the chat agent, its routes, `CHAT_AGENT=off`, and how to run it.

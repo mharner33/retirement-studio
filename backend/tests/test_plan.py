@@ -6,6 +6,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import create_app
+from backend.plan import api as plan_api
+from backend.profile.models import Household
+from backend.rules.models import TaxRules
 from backend.tests.conftest import build_sample_household
 
 TIME_BUDGET = 20.0
@@ -62,3 +65,52 @@ def test_plan_endpoint_runtime_under_20s(
     status, _, seconds = timed_plan
     assert status == 200
     assert seconds < TIME_BUDGET
+
+
+def _save_sample(client: TestClient) -> None:
+    saved = build_sample_household().model_dump(mode="json", by_alias=True)
+    assert client.put("/api/profile", json=saved).status_code == 200
+
+
+def test_whatif_retire_at_65(client: TestClient) -> None:
+    _save_sample(client)
+    body = [{"op": "set", "path": "self.retirement_age", "value": 65}]
+    res = client.post("/api/plan/whatif", json=body)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["whatif"]["best_rows"][0]["wages"] > 0
+    assert data["current"] == client.get("/api/plan").json()
+    assert data["changes"] == [
+        {"label": "Retirement age (you)", "kind": "age", "old": 63, "new": 65}
+    ]
+    assert client.get("/api/profile").json()["self"]["retirement_age"] == 63
+
+
+def test_whatif_422_on_bad_change(client: TestClient) -> None:
+    _save_sample(client)
+    body = [{"op": "set", "path": "self.first_name", "value": 1}]
+    res = client.post("/api/plan/whatif", json=body)
+    assert res.status_code == 422
+    assert "first_name" in res.json()["detail"]
+
+
+def test_whatif_409_without_profile(client: TestClient) -> None:
+    assert client.post("/api/plan/whatif", json=[]).status_code == 409
+
+
+def test_plan_for_cached(
+    monkeypatch: pytest.MonkeyPatch, rules: TaxRules, sample_household: Household
+) -> None:
+    calls: list[int] = []
+    real_rank = plan_api.rank
+
+    def counting_rank(*args: Any) -> Any:
+        calls.append(1)
+        return real_rank(*args)
+
+    monkeypatch.setattr(plan_api, "rank", counting_rank)
+    plan_api._cache.clear()
+    first = plan_api.plan_for(sample_household, rules, "r.md", 2026, False)
+    second = plan_api.plan_for(sample_household, rules, "r.md", 2026, False)
+    assert second is first
+    assert len(calls) == 1

@@ -60,3 +60,7 @@ export function postJson<T>(path: string, body?: unknown): Promise<T> {
 export function postForm<T>(path: string, form: FormData): Promise<T> {
   return request<T>(path, "POST", form);
 }
+
+export async function deleteRequest(path: string): Promise<void> {
+  await send(path, "DELETE");
+}
