@@ -517,3 +517,32 @@ textarea:focus-visible {
 .change-card .actions {
   margin-top: 0.25rem;
 }
+
+.column-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.help-button {
+  padding: 0 0.15rem;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.help-popover {
+  position: fixed;
+  z-index: 10;
+  width: min(18rem, calc(100vw - 16px));
+  padding: 0.75rem;
+  border: 1px solid var(--divider);
+  border-radius: 0.75rem;
+  background: var(--card-bg);
+  color: var(--text);
+  font-weight: 400;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+}
