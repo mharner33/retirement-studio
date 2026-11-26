@@ -1,5 +1,8 @@
+import { useCallback, useState } from "react";
 import { formatUsd } from "../format";
 import type { YearRow } from "../types";
+import { ColumnHelp } from "./ColumnHelp";
+import { COLUMN_HELP } from "./columnHelp";
 import { KIND_LABELS, sum } from "./kinds";
 
 function Withdrawals({ row }: Readonly<{ row: YearRow }>) {
@@ -19,6 +22,10 @@ function Withdrawals({ row }: Readonly<{ row: YearRow }>) {
 }
 
 export function YearTable({ rows }: Readonly<{ rows: YearRow[] }>) {
+  const [open, setOpen] = useState<string | null>(null);
+  const close = useCallback(() => {
+    setOpen(null);
+  }, []);
   return (
     <section className="card wide">
       <h2>Year by year</h2>
@@ -26,14 +33,19 @@ export function YearTable({ rows }: Readonly<{ rows: YearRow[] }>) {
         <table aria-label="Year by year">
           <thead>
             <tr>
-              <th scope="col">Year</th>
-              <th scope="col">Ages</th>
-              <th scope="col">Social Security</th>
-              <th scope="col">Withdrawals</th>
-              <th scope="col">Roth conversion</th>
-              <th scope="col">Tax</th>
-              <th scope="col">Spending</th>
-              <th scope="col">End balance</th>
+              {COLUMN_HELP.map((c) => (
+                <th scope="col" key={c.label}>
+                  <ColumnHelp
+                    label={c.label}
+                    help={c.help}
+                    open={open === c.label}
+                    onToggle={() => {
+                      setOpen(open === c.label ? null : c.label);
+                    }}
+                    onClose={close}
+                  />
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>

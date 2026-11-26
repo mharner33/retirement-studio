@@ -18,5 +18,10 @@ test("shows the plan for the sample profile", async ({ page, request }) => {
   const years = page.getByRole("table", { name: "Year by year" });
   expect(await years.getByRole("row").count()).toBeGreaterThanOrEqual(21);
   await expect(page.getByRole("img", { name: /Stacked balances/ })).toBeVisible();
+
+  await years.getByRole("button", { name: "How Social Security is worked out" }).click();
+  await expect(years.getByRole("note")).toContainText("Both benefits together");
+  await page.keyboard.press("Escape");
+  await expect(years.getByRole("note")).toHaveCount(0);
   expect(await page.locator("main").innerText()).not.toContain("!");
 });
