@@ -17,4 +17,10 @@ data/
 
 # Node modules directory
 node_modules/
+coverage/
+dashboard/dist/
 
+.coverage
+htmlcov/
+test-results/
+playwright-report/

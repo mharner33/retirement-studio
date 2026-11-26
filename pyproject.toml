@@ -1,38 +1,22 @@
 [project]
 name = "retirement-studio"
 version = "0.1.0"
-description = "Add your description here"
+description = "Retirement analysis and planning tool"
 readme = "README.md"
 authors = [
     { name = "Mike Harner", email = "mharner33@gmail.com" }
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "beautifulsoup4>=4.15.0",
-    "boto3>=1.43.108",
-    "claude-agent-sdk>=0.2.161",
-    "deepagents>=0.7.19",
     "fastapi>=0.141.1",
-    "gradio>=6.29.1",
     "httpx>=0.28.1",
-    "ipykernel>=7.3.0",
-    "ipywidgets>=8.1.9",
     "langchain>=1.4.2",
-    "langchain-mcp-adapters>=0.3.2",
     "langchain-openai>=1.6.2",
-    "langfuse>=4.16.0",
-    "langgraph-checkpoint-postgres>=3.1.2",
-    "mangum>=0.22.0",
-    "nbformat>=5.11.1",
-    "ollama>=0.6.2",
-    "openai>=3.19.2",
-    "openrouter>=1.2.1",
-    "pandas>=3.0.6",
-    "plotly>=7.1.0",
-    "psycopg[binary]>=3.3.6",
+    "pydantic>=2",
+    "pymupdf>=1.24",
     "python-dotenv>=1.2.3",
-    "requests>=2.34.2",
-    "tqdm>=4.70.1",
+    "python-multipart>=0.0.9",
     "uvicorn>=0.54.0",
 ]
 
@@ -41,16 +25,6 @@ dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.16.9",
-]
-server = [
-    "fastapi>=0.141.1",
-    "httpx>=0.28.1",
-    "mangum>=0.22.0",
-    "openrouter>=1.2.1",
-    "psycopg[binary]>=3.3.6",
-    "pyjwt[crypto]>=2.15.1",
-    "sqlalchemy>=2.1.3",
-    "uvicorn>=0.54.0",
 ]
 
 [tool.ruff]
@@ -71,6 +45,7 @@ max-complexity = 10
 testpaths = ["backend", "agent"]
 pythonpath = ["."]
 addopts = "--import-mode=importlib --cov --cov-report=term-missing"
+markers = ["slow: long-running test; still runs in the default suite"]
 
 [tool.coverage.run]
 source = ["backend", "agent"]
@@ -84,10 +59,3 @@ include = ["backend", "agent"]
 venvPath = "."
 venv = ".venv"
 pythonVersion = "3.12"
-
-[project.scripts]
-retirement-studio = "retirement_studio:main"
-
-[build-system]
-requires = ["uv_build>=0.13.9,<0.14.0"]
-build-backend = "uv_build"

@@ -118,19 +118,19 @@ Builder's calls fixed here: stdlib `sqlite3` (no ORM); the household profile is 
 
 **Files:** Create `playwright.config.ts` (`webServer`: backend on 8000 with `DATA_DIR` pointing to a temp dir, Vite on 5173), `e2e/health.spec.ts`, `lefthook.yml`, `Containerfile`, `compose.yaml`, `.containerignore`; modify `backend/main.py` (serve `dashboard/dist` at `/` when the folder exists), `docs/TECH_STACK.md` (drop the claim-id line, Python 3.12), `docs/STATUS.md`, `README.md`.
 
-- [ ] `e2e/health.spec.ts`: page shows "Backend is up"; after the theme toggle, the body background is `rgb(25, 27, 46)`.
-- [ ] `lefthook.yml` pre-commit runs in parallel: `uv run ruff format --check`, `uv run ruff check`, `npx pyright`, `uv run pytest -q`, `npx prettier --check -u dashboard e2e *.config.*`, `npx eslint dashboard e2e *.config.*`, `npx tsc`, `npx vitest run --root dashboard --coverage`.
-- [ ] `Containerfile`: stage 1 `node:26` runs `npm ci && npx vite build dashboard`; stage 2 `python:3.12-slim` with uv runs `uv sync --frozen --no-dev`, copies `backend/`, `agent/` and `dashboard/dist`, sets `DATA_DIR=/data`, `EXPOSE 8000`, CMD uvicorn. `compose.yaml`: one service, port `8000:8000`, volume `./data:/data:Z`, `env_file: .env`, healthcheck on `/api/health`.
-- [ ] Add a backend test `test_serves_dashboard_when_built` (a tmp `dist/index.html` is served at `/`).
-- [ ] Commit `chore: e2e, pre-commit hooks, container`.
+- [x] `e2e/health.spec.ts`: page shows "Backend is up"; after the theme toggle, the body background is `rgb(25, 27, 46)`.
+- [x] `lefthook.yml` pre-commit runs in parallel: `uv run ruff format --check`, `uv run ruff check`, `npx pyright`, `uv run pytest -q`, `npx prettier --check -u dashboard e2e *.config.*`, `npx eslint dashboard e2e *.config.*`, `npx tsc`, `npx vitest run --root dashboard --coverage`.
+- [x] `Containerfile`: stage 1 `node:26` runs `npm ci && npx vite build dashboard`; stage 2 `python:3.12-slim` with uv runs `uv sync --frozen --no-dev`, copies `backend/`, `agent/` and `dashboard/dist`, sets `DATA_DIR=/data`, `EXPOSE 8000`, CMD uvicorn. `compose.yaml`: one service, port `8000:8000`, volume `./data:/data:Z`, `env_file: .env`, healthcheck on `/api/health`.
+- [x] Add a backend test `test_serves_dashboard_when_built` (a tmp `dist/index.html` is served at `/`).
+- [x] Commit `chore: e2e, pre-commit hooks, container`.
 
 **Phase 1 success criteria**
-- [ ] `uv run python --version` prints `Python 3.12.x`; `uv run python -c "import pymupdf"` exits 0.
-- [ ] `npm run check` passes (Python and TS coverage both ≥80%, e2e green).
-- [ ] `npm run dev`, then `curl -s localhost:8000/api/health` → `{"status":"ok"}`.
-- [ ] `podman build -t retirement-studio -f Containerfile .` succeeds; `podman compose up -d`, then `curl -s localhost:8000/api/health` → `{"status":"ok"}`, and `curl -s localhost:8000/` returns HTML containing `<div id="root">`.
-- [ ] Playwright MCP: the dashboard at `localhost:5173` shows "Backend is up" in both themes, and the colors match `docs/BRAND.md`.
-- [ ] `git commit` on a staged file runs the lefthook checks (visible in output).
+- [x] `uv run python --version` prints `Python 3.12.x`; `uv run python -c "import pymupdf"` exits 0.
+- [x] `npm run check` passes (Python and TS coverage both ≥80%, e2e green).
+- [x] `npm run dev`, then `curl -s localhost:8000/api/health` → `{"status":"ok"}`.
+- [x] `podman build -t retirement-studio -f Containerfile .` succeeds; `podman compose up -d`, then `curl -s localhost:8000/api/health` → `{"status":"ok"}`, and `curl -s localhost:8000/` returns HTML containing `<div id="root">`.
+- [x] Playwright MCP: the dashboard at `localhost:5173` shows "Backend is up" in both themes, and the colors match `docs/BRAND.md`. (checked with scripted Playwright screenshots; no MCP server in this environment)
+- [x] `git commit` on a staged file runs the lefthook checks (visible in output).
 
 ---
 
@@ -159,13 +159,13 @@ Builder's calls fixed here: stdlib `sqlite3` (no ORM); the household profile is 
 
 **Interfaces — Produces:** `ProfilePage` with steps "You", "Spouse", "Income", "Accounts", "Spending", "Assumptions", plus Back and Next buttons and "Save" on the last step. Once a profile exists, it opens as a single editable page with every section. `MoneyInput` shows `$1,250.00` when not focused and accepts plain digits.
 
-- [ ] Tests: the stepper advances and keeps values; Save sends the JSON shape from 2.1 to `PUT /api/profile`; a 422 shows the field message next to the field; "Add spouse" and "Remove spouse" toggle the spouse section; `MoneyInput` formats on blur. In e2e, fill the form with the `sample_household` values, save, reload, and the values persist.
-- [ ] Commit `feat: guided profile form`.
+- [x] Tests: the stepper advances and keeps values; Save sends the JSON shape from 2.1 to `PUT /api/profile`; a 422 shows the field message next to the field; "Add spouse" and "Remove spouse" toggle the spouse section; `MoneyInput` formats on blur. In e2e, fill the form with the `sample_household` values, save, reload, and the values persist.
+- [x] Commit `feat: guided profile form`.
 
 **Phase 2 success criteria**
-- [ ] `npm run check` passes.
-- [ ] `curl -X PUT localhost:8000/api/profile -d @sample.json` followed by `GET` returns the same body; a negative balance returns 422 with a `balance` error.
-- [ ] Playwright MCP: complete the six steps, reload, every value is shown with money as `$900,000.00`; the dark theme reads correctly.
+- [x] `npm run check` passes.
+- [x] `curl -X PUT localhost:8000/api/profile -d @sample.json` followed by `GET` returns the same body; a negative balance returns 422 with a `balance` error.
+- [x] Playwright MCP: complete the six steps, reload, every value is shown with money as `$900,000.00`; the dark theme reads correctly. (checked with scripted Playwright screenshots; no MCP server in this environment)
 
 ---
 
@@ -225,7 +225,7 @@ Builder's calls fixed here: stdlib `sqlite3` (no ORM); the household profile is 
 
 Yearly order (fixed here because the tests do not decide it): (1) wages and 401(k) contributions until each retirement age; (2) Social Security from the claim age with COLA, spousal top-up, survivor keeps the larger benefit, pension with survivor percent; (3) RMD from `rmd_start_age`, using the survivor's age after a death; (4) conversion within `[convert_from_age, convert_to_age]` of the older living person = `max(0, target_ceiling − ordinary income so far)`, where `irmaa1` means first IRMAA threshold − $1,000; (5) spending = (essential + discretionary + extra) inflated + one-time + health premiums (COBRA for 18 months from retirement, then bridge until 65, then Part B base) + last year's tax bill; (6) cover the gap from accounts in the strategy order, cash always first; taxable withdrawals realize gain pro-rata to basis; tax is grossed up by iterating up to 20 times until it changes by less than $1; (7) apply returns (cash grows at inflation); (8) when a person passes `plan_to_age`, their accounts roll to the survivor and filing becomes `single` the following year. The plan ends after the last living person's `plan_to_age`. `shortfall_year` is the first year the gap cannot be covered; rows continue with zero balances.
 
-- [ ] Tests:
+- [x] Tests:
   - `test_monthly_benefit_interpolates` (claim 65 between the 62 and 67 values).
   - `test_spousal_topup_when_low_own_benefit`.
   - `test_spousal_topup_zero_when_own_high`.
@@ -239,13 +239,13 @@ Yearly order (fixed here because the tests do not decide it): (1) wages and 401(
   - `test_overspending_reports_shortfall_without_error` (Review Focus).
   - `test_deterministic_same_inputs_same_output`.
   - API: `test_project_endpoint_returns_rows` (needs a saved profile; 409 without one).
-- [ ] Commit `feat: year-by-year projection engine`.
+- [x] Commit `feat: year-by-year projection engine`.
 
 **Phase 3 success criteria**
-- [ ] `npm run check` passes.
-- [ ] `uv run pytest backend/tests/test_tax.py backend/tests/test_projection.py --no-cov -q` passes.
-- [ ] With the sample profile saved, `curl -X POST localhost:8000/api/plan/project -d '{"conversion_target":"12","convert_from_age":63,"convert_to_age":74,"withdrawal_order":"taxable_first","claim_ages":[67,67]}'` returns rows from 2026 to the spouse's plan-to year, with non-zero `conversion` from age 63 and `rmd` starting in 2038.
-- [ ] Hand check: one row's federal tax recomputed by hand from the seed brackets matches within $1.00. Record the check in `docs/STATUS.md`.
+- [x] `npm run check` passes.
+- [x] `uv run pytest backend/tests/test_tax.py backend/tests/test_projection.py --no-cov -q` passes.
+- [x] With the sample profile saved, `curl -X POST localhost:8000/api/plan/project -H 'content-type: application/json' -d '{"conversion_target":"12","convert_from_age":63,"convert_to_age":74,"withdrawal_order":"taxable_first","claim_ages":[67,67]}'` returns rows from 2026 to the spouse's plan-to year, with non-zero `conversion` from age 63. The same call with `"conversion_target":"none"` has `rmd` starting in 2038. (Amended during the build: under fill-12% the sample's pretax balance is fully converted or spent by 2035, so no RMD is due.)
+- [x] Hand check: one row's federal tax recomputed by hand from the seed brackets matches within $1.00. Record the check in `docs/STATUS.md`.
 
 ---
 
@@ -286,14 +286,14 @@ Yearly order (fixed here because the tests do not decide it): (1) wages and 401(
 - A notice when the bridge is ACA: "Roth conversions before 65 may reduce your ACA premium subsidy. This plan does not include it."
 - "Complete your profile first" when there's no profile, and "Calculating plan" while loading.
 
-- [ ] Tests: the headline renders from a mocked `PlanResult`; the table shows `$1,250.00` formatting; the ACA notice appears only when `bridge_is_aca`; the empty state appears on 409. In e2e, save the sample profile, open Plan, and see the headline and at least 20 table rows.
-- [ ] Commit `feat: plan page with strategy comparison and year table`.
+- [x] Tests: the headline renders from a mocked `PlanResult`; the table shows `$1,250.00` formatting; the ACA notice appears only when `bridge_is_aca`; the empty state appears on 409. In e2e, save the sample profile, open Plan, and see the headline and at least 20 table rows.
+- [x] Commit `feat: plan page with strategy comparison and year table`.
 
 **Phase 4 success criteria**
-- [ ] `npm run check` passes.
-- [ ] `time curl -s localhost:8000/api/plan` finishes in under 20 s for the sample profile. The response has 5 `top` entries, each with `0 <= success_rate <= 1` and `safe_extra >= 0`, and the top entry's `after_tax_end` is at least the baseline's.
-- [ ] Two identical `GET /api/plan` calls return identical JSON.
-- [ ] Playwright MCP: the Plan page shows the headline, comparison table, year table and chart in both themes, with no exclamation marks in the text.
+- [x] `npm run check` passes.
+- [x] `time curl -s localhost:8000/api/plan` finishes in under 20 s for the sample profile. The response has 5 `top` entries, each with `0 <= success_rate <= 1` and `safe_extra >= 0`, and the top entry's `after_tax_end` is at least the baseline's.
+- [x] Two identical `GET /api/plan` calls return identical JSON.
+- [x] Playwright MCP: the Plan page shows the headline, comparison table, year table and chart in both themes, with no exclamation marks in the text. (checked with scripted Playwright screenshots; no MCP server in this environment)
 
 ---
 
@@ -345,14 +345,14 @@ Yearly order (fixed here because the tests do not decide it): (1) wages and 401(
 
 **Interfaces — Produces:** The page shows the current rules date and age in days, the source list, a "Refresh rules" button (`POST /api/rules/refresh`, then shows "Research started. Check back in a few minutes."), and the pending review: a table of path, old value and new value, with "Accept" and "Keep current" buttons. A stale banner, "Rules are out of date", appears here and on the Plan page.
 
-- [ ] Tests: the stale banner shows when `stale`; Accept posts to the accept route and refreshes status; no pending section appears without a pending file. In e2e, `POST /api/rules` a modified seed through the API, open Rules, see the change row, Accept, and the current date updates.
-- [ ] Commit `feat: rules review page`.
+- [x] Tests: the stale banner shows when `stale`; Accept posts to the accept route and refreshes status; no pending section appears without a pending file. In e2e, `POST /api/rules` a modified seed through the API, open Rules, see the change row, Accept, and the current date updates.
+- [x] Commit `feat: rules review page`.
 
 **Phase 5 success criteria**
-- [ ] `npm run check` passes.
-- [ ] `curl -X POST localhost:8000/api/rules -d '{"markdown":"no json"}'` → 422, and `GET /api/rules/status` still shows the seed.
-- [ ] Live run, the only step that calls a real model, done by hand with `.env` set: `uv run python -c "from agent.rules_research import refresh; print(refresh())"` creates a pending file in `data/rules/` whose JSON validates, and the Rules page lists its changes. Record the outcome and cost in `docs/STATUS.md`.
-- [ ] Playwright MCP: the review flow from the e2e test works in both themes.
+- [x] `npm run check` passes.
+- [x] `curl -X POST localhost:8000/api/rules -d '{"markdown":"no json"}'` → 422, and `GET /api/rules/status` still shows the seed.
+- [x] Live run, the only step that calls a real model, done by hand with `.env` set: `uv run python -c "from agent.rules_research import refresh; print(refresh())"` creates a pending file in `data/rules/` whose JSON validates, and the Rules page lists its changes. Record the outcome and cost in `docs/STATUS.md`.
+- [x] Playwright MCP: the review flow from the e2e test works in both themes. (checked with scripted Playwright screenshots; no MCP server in this environment)
 
 ---
 
@@ -416,18 +416,18 @@ Yearly order (fixed here because the tests do not decide it): (1) wages and 401(
   - Social Security statements show "Whose statement is this?" (You or Spouse, required) and the three editable monthly amounts.
 - Both forms have "Accept" and "Discard" buttons, and the page shows "Nothing is saved until you accept."
 
-- [ ] Tests:
+- [x] Tests:
   - Dropping 3 files sends one multipart request with 3 `files` parts and lists 3 results.
   - A rejected file shows its error while the others show as saved.
   - The account review form edits a balance before Accept and sends the edited value.
   - The Social Security form blocks Accept until a person is chosen.
   - "No text found" shows for `no_text`.
   - e2e: upload two generated PDFs in one action, then `PUT` an account extraction and a Social Security extraction through the API (no model). Review and accept both. The Profile page shows the new balance and the spouse's new Social Security estimates.
-- [ ] Commit `feat: statements review page`.
+- [x] Commit `feat: statements review page`.
 
 **Phase 6 success criteria**
-- [ ] `npm run check` passes.
-- [ ] `podman build` and `podman compose up -d` work. Inside the container, `/api/health` is ok, the dashboard loads at `localhost:8000`, a profile saved through the UI survives `podman compose down && podman compose up -d` (stored in `./data/studio.db`), and an uploaded PDF appears in `./data/statements/`.
+- [x] `npm run check` passes.
+- [x] `podman build` and `podman compose up -d` work. Inside the container, `/api/health` is ok, the dashboard loads at `localhost:8000`, a profile saved through the UI survives `podman compose down && podman compose up -d` (stored in `./data/studio.db`), and an uploaded PDF appears in `./data/statements/`.
 - [ ] Live run by hand with `.env`: upload one real account statement and one real Social Security statement together, run "Extract all", review, accept, and the Plan page updates. Record the outcome in `docs/STATUS.md` with no account details.
-- [ ] Playwright MCP: Profile, Plan, Rules and Statements pages all render in both themes; money everywhere looks like `$1,250.00`; no exclamation marks.
-- [ ] `docs/STATUS.md` describes everything built and how to run it; the chat agent is listed as next, in `docs/PLAN_CHAT.md`.
+- [x] Playwright MCP: Profile, Plan, Rules and Statements pages all render in both themes; money everywhere looks like `$1,250.00`; no exclamation marks. (checked with scripted Playwright screenshots; no MCP server in this environment)
+- [x] `docs/STATUS.md` describes everything built and how to run it; the chat agent is listed as next, in `docs/PLAN_CHAT.md`.

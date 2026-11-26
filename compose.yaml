@@ -1,0 +1,21 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: retirement-studio
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data:Z
+    env_file:
+      - path: .env
+        required: false
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c 'import urllib.request; urllib.request.urlopen("http://localhost:8000/api/health")'
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

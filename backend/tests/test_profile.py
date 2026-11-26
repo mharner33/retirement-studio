@@ -1,0 +1,79 @@
+import json
+from datetime import date
+from pathlib import Path
+
+from fastapi.testclient import TestClient
+
+from backend import db, settings
+from backend.profile.models import Household
+from backend.tests.conftest import build_sample_household
+
+
+def body(household: Household) -> dict:
+    return household.model_dump(mode="json", by_alias=True)
+
+
+def test_put_then_get_roundtrip(
+    client: TestClient, sample_household: Household
+) -> None:
+    sent = body(sample_household)
+    assert "self" in sent
+    put = client.put("/api/profile", json=sent)
+    assert put.status_code == 200
+    got = client.get("/api/profile")
+    assert got.status_code == 200
+    assert got.json() == sent
+    assert Household.model_validate(got.json()) == sample_household
+
+
+def test_get_without_profile_404(client: TestClient) -> None:
+    assert client.get("/api/profile").status_code == 404
+
+
+def test_negative_balance_422(client: TestClient, sample_household: Household) -> None:
+    sent = body(sample_household)
+    sent["accounts"][0]["balance"] = -1
+    assert client.put("/api/profile", json=sent).status_code == 422
+
+
+def test_plan_to_age_not_above_current_age_422(
+    client: TestClient, sample_household: Household
+) -> None:
+    today = date.today()
+    sent = body(sample_household)
+    sent["self"]["birth_date"] = date(today.year - 60, 1, 1).isoformat()
+    sent["self"]["plan_to_age"] = 60
+    res = client.put("/api/profile", json=sent)
+    assert res.status_code == 422
+    assert res.json()["detail"][0]["loc"] == ["body", "self", "plan_to_age"]
+    sent["self"]["plan_to_age"] = 61
+    assert client.put("/api/profile", json=sent).status_code == 200
+
+
+def test_spouse_plan_to_age_error_points_at_spouse(
+    client: TestClient, sample_household: Household
+) -> None:
+    sent = body(sample_household)
+    sent["spouse"]["birth_date"] = date(date.today().year - 60, 1, 1).isoformat()
+    sent["spouse"]["plan_to_age"] = 60
+    res = client.put("/api/profile", json=sent)
+    assert res.json()["detail"][0]["loc"] == ["body", "spouse", "plan_to_age"]
+
+
+def test_filing_status_follows_spouse() -> None:
+    household = build_sample_household()
+    assert household.filing_status == "mfj"
+    assert household.model_copy(update={"spouse": None}).filing_status == "single"
+
+
+def test_stored_profile_past_plan_to_age_still_loads(
+    client: TestClient, tmp_path: Path, sample_household: Household
+) -> None:
+    sent = body(sample_household)
+    sent["self"]["birth_date"] = date(date.today().year - 90, 1, 1).isoformat()
+    sent["self"]["plan_to_age"] = 82
+    conn = db.connect(settings.db_path(tmp_path))
+    conn.execute("INSERT INTO profile (id, body) VALUES (1, ?)", (json.dumps(sent),))
+    conn.commit()
+    conn.close()
+    assert client.get("/api/profile").status_code == 200

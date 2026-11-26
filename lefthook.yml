@@ -1,42 +1,19 @@
-# EXAMPLE USAGE:
-#
-#   Refer for explanation to following link:
-#   https://lefthook.dev/configuration/
-#
-# pre-push:
-#   jobs:
-#     - name: packages audit
-#       tags:
-#         - frontend
-#         - security
-#       run: yarn audit
-#
-#     - name: gems audit
-#       tags:
-#         - backend
-#         - security
-#       run: bundle audit
-#
-# pre-commit:
-#   parallel: true
-#   jobs:
-#     - run: yarn eslint {staged_files}
-#       glob: "*.{js,ts,jsx,tsx}"
-#
-#     - name: rubocop
-#       glob: "*.rb"
-#       exclude:
-#         - config/application.rb
-#         - config/routes.rb
-#       run: bundle exec rubocop --force-exclusion -- {all_files}
-#
-#     - name: govet
-#       files: git ls-files -m
-#       glob: "*.go"
-#       run: go vet -- {files}
-#
-#     - script: "hello.js"
-#       runner: node
-#
-#     - script: "hello.go"
-#       runner: go run
+pre-commit:
+  parallel: true
+  jobs:
+    - name: ruff format
+      run: uv run ruff format --check
+    - name: ruff lint
+      run: uv run ruff check
+    - name: pyright
+      run: npx pyright
+    - name: pytest
+      run: uv run pytest -q
+    - name: prettier
+      run: npx prettier --check -u dashboard e2e *.config.*
+    - name: eslint
+      run: npx eslint dashboard e2e *.config.*
+    - name: tsc
+      run: npx tsc
+    - name: vitest
+      run: npx vitest run --root dashboard --coverage
